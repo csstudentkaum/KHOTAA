@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# PyTorch
+*.pth
+*.pt
+runs/
+checkpoints/
+
+# Dataset (DO NOT UPLOAD TO GITHUB)
+dataset/
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Outputs & Results
+outputs/
+results/
+*.png
+*.jpg
+*.jpeg
+!README_assets/*.png
+!README_assets/*.jpg
+
+# Test files
+test_*.py
