@@ -47,7 +47,7 @@ KHOTAA/
 
 The dataset has been tested and verified:
 - ✅ Dataset found at: `./dataset`
-- ✅ 4 classes detected: Grade 1, Grade 2, Grade 3, Grade 4
+- ✅ 4 classes identified: Grade 1, Grade 2, Grade 3, Grade 4
 - ✅ All splits loaded successfully (train/valid/test)
 - ✅ Images load correctly (224x224 RGB)
 - ✅ Balanced class distribution

@@ -1,6 +1,6 @@
 # KHOTAA: Smart Diabetic Foot Shield 
 
-Deep Learning-based classification system for Diabetic Foot Ulcer (DFU) detection and grading.
+Deep Learning-based image classification system for Diabetic Foot Ulcer (DFU) severity grading.
 
 ### Dataset
 - **Source:** [Kaggle DFU Dataset](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
@@ -81,7 +81,7 @@ python3 test_dataset_loader.py
 Expected output:
 - ✅ Dataset found
 - ✅ 10,062 images loaded
-- ✅ 4 classes detected
+- ✅ 4 classes identified
 - ✅ All splits working
 
 ### 5. Start Training
@@ -180,7 +180,7 @@ Key packages:
 ##  Acknowledgments
 
 - Dataset: [Khalid Siddiqui - Kaggle](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
-- Inspiration: Medical AI research for diabetic foot ulcer detection
+- Inspiration: Medical AI research for diabetic foot ulcer classification
 
 ---
 
