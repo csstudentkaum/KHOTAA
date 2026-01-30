@@ -11,6 +11,55 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 
 
+class EarlyStopping:
+    """Early stopping to stop training when validation loss doesn't improve"""
+    
+    def __init__(self, patience=7, min_delta=0.0, verbose=True):
+        """
+        Args:
+            patience (int): Number of epochs to wait before stopping
+            min_delta (float): Minimum change to qualify as improvement
+            verbose (bool): Print messages
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.verbose = verbose
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+        self.best_epoch = 0
+    
+    def __call__(self, val_loss, epoch):
+        """
+        Check if should stop training
+        
+        Args:
+            val_loss (float): Current validation loss
+            epoch (int): Current epoch number
+        
+        Returns:
+            bool: True if should stop training
+        """
+        if self.best_loss is None:
+            self.best_loss = val_loss
+            self.best_epoch = epoch
+        elif val_loss > self.best_loss - self.min_delta:
+            self.counter += 1
+            if self.verbose:
+                print(f'WARNING: EarlyStopping counter: {self.counter}/{self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+                if self.verbose:
+                    print(f'SUCCESS: Early stopping triggered at epoch {epoch}')
+                    print(f'Best validation loss was {self.best_loss:.4f} at epoch {self.best_epoch}')
+        else:
+            self.best_loss = val_loss
+            self.best_epoch = epoch
+            self.counter = 0
+        
+        return self.early_stop
+
+
 class TrainingEngine:
     """Complete training and evaluation engine for PyTorch models"""
     
@@ -129,30 +178,40 @@ class TrainingEngine:
         return epoch_loss, epoch_acc, np.array(all_predictions), np.array(all_labels)
     
     def train(self, train_loader, val_loader, criterion, optimizer, 
-              num_epochs, scheduler=None, checkpoint_manager=None):
+              num_epochs, scheduler=None, checkpoint_manager=None,
+              early_stopping_patience=7, use_early_stopping=True, verbose=True):
         """
-        Complete training loop
+        Complete training loop with early stopping support
         
         Args:
             train_loader: Training DataLoader
             val_loader: Validation DataLoader
             criterion: Loss function
             optimizer: Optimizer
-            num_epochs (int): Number of epochs to train
+            num_epochs (int): Maximum number of epochs to train
             scheduler: Learning rate scheduler (optional)
             checkpoint_manager: CheckpointManager instance (optional)
+            early_stopping_patience (int): Epochs to wait before early stopping (default: 7)
+            use_early_stopping (bool): Whether to use early stopping (default: True)
+            verbose (bool): Show detailed progress (default: True)
         
         Returns:
-            dict: Training history
+            dict: Training history with actual epochs trained
         """
         history = {
             'train_loss': [],
             'train_acc': [],
             'val_loss': [],
-            'val_acc': []
+            'val_acc': [],
+            'stopped_epoch': num_epochs
         }
         
         best_val_acc = 0.0
+        
+        # Initialize early stopping
+        early_stopper = None
+        if use_early_stopping:
+            early_stopper = EarlyStopping(patience=early_stopping_patience, verbose=verbose)
         
         for epoch in range(num_epochs):
             print(f"\n{'='*60}")
@@ -204,12 +263,27 @@ class TrainingEngine:
                         model=self.model,
                         metrics={'val_acc': val_acc, 'val_loss': val_loss}
                     )
-                print(f"⭐ New best model! Val Acc: {val_acc*100:.2f}%")
+                if verbose:
+                    print(f"⭐ New best model! Val Acc: {val_acc*100:.2f}%")
+            
+            # Check early stopping
+            if early_stopper is not None:
+                if early_stopper(val_loss, epoch+1):
+                    history['stopped_epoch'] = epoch + 1
+                    print(f"\n{'='*60}")
+                    print(f"SUCCESS: Training stopped early at epoch {epoch+1}/{num_epochs}")
+                    print(f"Best Validation Accuracy: {best_val_acc*100:.2f}%")
+                    print(f"{'='*60}\n")
+                    return history
         
-        print(f"\n{'='*60}")
-        print(f"SUCCESS: Training Complete!")
-        print(f"Best Validation Accuracy: {best_val_acc*100:.2f}%")
-        print(f"{'='*60}\n")
+        # Training completed without early stopping
+        history['stopped_epoch'] = num_epochs
+        if verbose:
+            print(f"\n{'='*60}")
+            print(f"SUCCESS: Training Complete!")
+            print(f"Completed all {num_epochs} epochs")
+            print(f"Best Validation Accuracy: {best_val_acc*100:.2f}%")
+            print(f"{'='*60}\n")
         
         return history
 

@@ -2,6 +2,12 @@
 
 **Training Method:** 5-Fold Cross-Validation (for robust model evaluation and selection)
 
+**Training Configuration:**
+- **Folds:** 5-fold stratified cross-validation
+- **Max Epochs:** 30 per fold
+- **Early Stopping:** Enabled (patience=7 epochs)
+- **Performance Reporting:** Mean ± Std across all folds
+
 **Why Cross-Validation?**
 - Estimates generalization performance on medium-sized datasets (~10K images)
 - Prevents overfitting to a single validation split
@@ -155,6 +161,8 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
         num_epochs=30,
         scheduler=scheduler,
         checkpoint_manager=checkpoint_manager,
+        early_stopping_patience=7,
+        use_early_stopping=True,
         verbose=True
     )
     
@@ -163,14 +171,26 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
     fold_results.append({
         'fold': fold,
         'best_val_acc': best_val_acc,
+        'final_val_acc': history['val_acc'][-1],
+        'stopped_epoch': history['stopped_epoch'],
         'history': history
     })
-    print(f"Fold {fold} Best Accuracy: {best_val_acc*100:.2f}%")
+    print(f"Fold {fold} - Best Acc: {best_val_acc*100:.2f}% (stopped at epoch {history['stopped_epoch']})")
 
 # Cross-validation summary
 avg_acc = np.mean([r['best_val_acc'] for r in fold_results])
 std_acc = np.std([r['best_val_acc'] for r in fold_results])
-print(f"\n5-FOLD CV RESULTS: {avg_acc*100:.2f}% ± {std_acc*100:.2f}%")
+avg_epochs = np.mean([r['stopped_epoch'] for r in fold_results])
+
+print(f"\n{'='*60}")
+print(f"5-FOLD CROSS-VALIDATION RESULTS")
+print(f"{'='*60}")
+print(f"Mean Accuracy: {avg_acc*100:.2f}% ± {std_acc*100:.2f}%")
+print(f"Average Epochs: {avg_epochs:.1f}")
+print(f"\nIndividual Fold Results:")
+for r in fold_results:
+    print(f"  Fold {r['fold']}: {r['best_val_acc']*100:.2f}% (epoch {r['stopped_epoch']})")
+print(f"{'='*60}")
 ```
 
 ---
@@ -257,12 +277,29 @@ plot_training_history(
 ## Key Parameters
 
 - **batch_size**: 32 (default, as per paper)
-- **epochs**: 30 (default, as per paper)
+- **max_epochs**: 30 per fold (with early stopping)
+- **early_stopping_patience**: 7 epochs (stops if no improvement)
 - **momentum**: 0.8 (for SGD optimizer)
 - **learning_rate**: 0.001 with StepLR scheduler
 - **num_workers**: 4 (CPU processes for data loading, NOT number of classes)
 - **num_classes**: 4 (Grade 1, 2, 3, 4)
 - **cv_folds**: 5 (stratified cross-validation)
+
+---
+
+## Performance Reporting
+
+Results are reported as **mean ± standard deviation across 5 folds**:
+
+```python
+# Example output format for research paper:
+# Model: ResNet50
+# Cross-Validation Accuracy: 94.23% ± 1.15%
+# Test Accuracy: 93.78%
+# Average Training Epochs: 24.2 (with early stopping)
+```
+
+Each fold may stop at different epochs due to early stopping, ensuring optimal performance without overfitting.
 
 ---
 
@@ -282,8 +319,10 @@ All research-standard metrics are automatically calculated:
 ## Quick Tips
 
 ✓ GPU will be used automatically if available  
+✓ Early stopping prevents overfitting (patience=7 epochs)  
 ✓ Best model from best fold is automatically saved  
 ✓ Checkpoints saved every 5 epochs  
 ✓ Progress bars show training progress  
 ✓ Test set untouched until final evaluation  
-✓ Results include mean ± std for research reporting
+✓ Results reported as mean ± std for research papers  
+✓ Each fold may stop at different epochs (optimal training)
