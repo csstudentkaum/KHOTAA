@@ -7,7 +7,7 @@ from collections import Counter
 
 class SplitFolderDatasetLoader:
     """
-    Dataset loader for KHOTAA Diabetic Foot Ulcer dataset.
+    Dataset loader for Diabetic Foot Ulcer dataset.
     """
 
     def __init__(

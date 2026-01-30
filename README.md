@@ -1,10 +1,6 @@
-# KHOTAA: Smart Diabetic Foot Shield 🦶🔬
+# KHOTAA: Smart Diabetic Foot Shield 
 
 Deep Learning-based classification system for Diabetic Foot Ulcer (DFU) detection and grading.
-
-## 📋 Project Overview
-
-KHOTAA (Smart Diabetic Foot Shield) is a machine learning project focused on classifying diabetic foot ulcers into 4 severity grades using state-of-the-art deep learning models.
 
 ### Dataset
 - **Source:** [Kaggle DFU Dataset](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
@@ -42,7 +38,7 @@ KHOTAA/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/KHOTAA.git
+git clone https://github.com/csstudentkaum/KHOTAA.git
 cd KHOTAA
 ```
 
@@ -95,19 +91,19 @@ Open any model notebook and start experimenting:
 jupyter notebook models/classification/resnet50.ipynb
 ```
 
-## 🧪 Models
+##  Models
 
 We're implementing 7 deep learning models for comparison:
 
 | Model | Type | Status | Notebook |
 |-------|------|--------|----------|
-| ResNet50 | CNN | 🔄 In Progress | `resnet50.ipynb` |
-| DenseNet | CNN | ⏳ Pending | `densenet.ipynb` |
-| GoogLeNet | Inception | ⏳ Pending | `googlenet.ipynb` |
-| MobileNet | Mobile | ⏳ Pending | `mobilenet.ipynb` |
-| ResNet101 | Deep CNN | ⏳ Pending | `resnet101.ipynb` |
-| EfficientNetV2S | Efficient | ⏳ Pending | `efficientnetv2s.ipynb` |
-| PFCNN + DRNN | Custom | ⏳ Pending | `pfcnn_drnn.ipynb` |
+| ResNet50 | CNN | In Progress | `resnet50.ipynb` |
+| DenseNet | CNN | In Progress | `densenet.ipynb` |
+| GoogLeNet | Inception | In Progress | `googlenet.ipynb` |
+| MobileNet | Mobile | In Progress| `mobilenet.ipynb` |
+| ResNet101 | Deep CNN |In Progress| `resnet101.ipynb` |
+| EfficientNetV2S | Efficient | In Progress| `efficientnetv2s.ipynb` |
+| PFCNN + DRNN | Custom | In Progress | `pfcnn_drnn.ipynb` |
 
 ## 👥 Team Collaboration
 
@@ -115,7 +111,7 @@ We're implementing 7 deep learning models for comparison:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/KHOTAA.git
+   git clone https://github.com/csstudentkaum/KHOTAA.git
    cd KHOTAA
    ```
 
@@ -151,7 +147,7 @@ We're implementing 7 deep learning models for comparison:
 - Create **Pull Requests** for review before merging
 - Use **Issues** for bug tracking and discussions
 
-## 📊 Dataset Information
+##  Dataset Information
 
 See [DATASET_SETUP.md](DATASET_SETUP.md) for detailed dataset information.
 
@@ -162,7 +158,7 @@ See [DATASET_SETUP.md](DATASET_SETUP.md) for detailed dataset information.
 - Grade 3: 2,802 images (27.8%)
 - Grade 4: 2,430 images (24.1%)
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Deep Learning:** PyTorch, torchvision
 - **Data Processing:** NumPy, OpenCV, Pillow
@@ -170,7 +166,7 @@ See [DATASET_SETUP.md](DATASET_SETUP.md) for detailed dataset information.
 - **Metrics:** scikit-learn
 - **Environment:** Jupyter Notebooks
 
-## 📝 Requirements
+##  Requirements
 
 See [requirements.txt](requirements.txt) for full dependencies.
 
@@ -181,24 +177,7 @@ Key packages:
 - `numpy >= 1.24.0`
 - `scikit-learn >= 1.3.0`
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is for academic/research purposes.
-
-## 👨‍💻 Authors
-
-- Your Team Name
-- Team Members List
-
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Dataset: [Khalid Siddiqui - Kaggle](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
 - Inspiration: Medical AI research for diabetic foot ulcer detection
