@@ -123,7 +123,10 @@ train_dataset = DFUDataset(X_train, y_train, transform=train_transform)
 val_dataset = DFUDataset(X_val, y_val, transform=val_test_transform)
 test_dataset = DFUDataset(X_test, y_test, transform=val_test_transform)
 
-# Create dataloaders (batch_size=32 is default)
+# Create dataloaders
+# batch_size=32: Number of images per batch (default as per paper)
+# num_workers=4: Number of CPU processes for parallel data loading (adjust based on your CPU)
+# Note: num_workers is NOT the number of classes! It's for performance optimization.
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
@@ -131,6 +134,7 @@ test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers
 print(f"Train batches: {len(train_loader)}")
 print(f"Val batches: {len(val_loader)}")
 print(f"Test batches: {len(test_loader)}")
+print(f"Number of classes: {num_classes}")  # This is 4 for DFU dataset
 ```
 
 ---
@@ -423,6 +427,8 @@ print("Metrics saved to results/resnet50_metrics.json")
 6. **Use batch_size=32** (default) as per the paper
 7. **Train for 30 epochs** (default) as per the paper
 8. **Set momentum=0.8** for optimizer as per the paper
+9. **Adjust num_workers** based on your CPU cores (4-8 is typical, 0 if issues occur)
+10. **Number of classes = 4** (Grade 1, 2, 3, 4) - Don't confuse with num_workers!
 
 ---
 
