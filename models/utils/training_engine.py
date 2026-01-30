@@ -1,6 +1,6 @@
 """
 Training Engine - PyTorch Training & Evaluation Runner
-Handles the complete training loop and evaluation
+Handles the complete training loop, evaluation, and cross-validation
 """
 
 import torch
@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
+from sklearn.model_selection import StratifiedKFold
 
 
 class TrainingEngine:
@@ -24,7 +25,7 @@ class TrainingEngine:
         self.model = model
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         self.model.to(self.device)
-        print(f"🚀 Training on: {self.device}")
+        print(f"Training on: {self.device}")
     
     def train_epoch(self, train_loader, criterion, optimizer):
         """
@@ -168,7 +169,7 @@ class TrainingEngine:
             if scheduler is not None:
                 scheduler.step()
                 current_lr = optimizer.param_groups[0]['lr']
-                print(f"📊 Learning Rate: {current_lr:.6f}")
+                print(f"Learning Rate: {current_lr:.6f}")
             
             # Save history
             history['train_loss'].append(train_loss)
@@ -177,7 +178,7 @@ class TrainingEngine:
             history['val_acc'].append(val_acc)
             
             # Print epoch results
-            print(f"\n📈 Epoch {epoch+1} Results:")
+            print(f"\nEpoch {epoch+1} Results:")
             print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%")
             print(f"   Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc*100:.2f}%")
             
@@ -206,8 +207,8 @@ class TrainingEngine:
                 print(f"⭐ New best model! Val Acc: {val_acc*100:.2f}%")
         
         print(f"\n{'='*60}")
-        print(f"✅ Training Complete!")
-        print(f"🏆 Best Validation Accuracy: {best_val_acc*100:.2f}%")
+        print(f"SUCCESS: Training Complete!")
+        print(f"Best Validation Accuracy: {best_val_acc*100:.2f}%")
         print(f"{'='*60}\n")
         
         return history
@@ -224,7 +225,7 @@ history = engine.train(
     val_loader=val_loader,
     criterion=nn.CrossEntropyLoss(),
     optimizer=optimizer,
-    num_epochs=50,
+    num_epochs=30,
     scheduler=scheduler,
     checkpoint_manager=checkpoint_manager
 )
@@ -235,4 +236,158 @@ test_loss, test_acc, predictions, labels = engine.evaluate(
     criterion=nn.CrossEntropyLoss()
 )
 print(f"Test Accuracy: {test_acc*100:.2f}%")
+"""
+
+
+class CrossValidationHelper:
+    """
+    Stratified K-Fold cross-validation helper for classification tasks
+    Automates fold splitting and model evaluation across folds
+    """
+    
+    def __init__(self, n_splits=5, random_state=42, shuffle=True):
+        """
+        Initialize cross-validation helper
+        
+        Args:
+            n_splits (int): Number of folds
+            random_state (int): Random seed for reproducibility
+            shuffle (bool): Whether to shuffle data before splitting
+        """
+        self.n_splits = n_splits
+        self.random_state = random_state
+        self.shuffle = shuffle
+        self.skf = StratifiedKFold(
+            n_splits=n_splits,
+            shuffle=shuffle,
+            random_state=random_state
+        )
+    
+    def run(self, X, y, create_model_fn, train_eval_fn, verbose=True, start_fold=1):
+        """
+        Run cross-validation
+        
+        Args:
+            X: Feature data (array-like, can be indices or actual data)
+            y: Labels (array-like)
+            create_model_fn: Function that creates and returns a new model instance
+                           Signature: create_model_fn(fold_index) -> model
+            train_eval_fn: Function that trains and evaluates the model
+                          Signature: train_eval_fn(model, X_train, y_train, X_val, y_val, fold_index) -> metrics_dict
+            verbose (bool): Whether to print progress
+            start_fold (int): Starting fold number (1-based, useful for resuming)
+        
+        Returns:
+            tuple: (fold_metrics, summary)
+                - fold_metrics: List of metric dictionaries, one per fold
+                - summary: Dictionary with mean and std for each metric
+        """
+        X = np.array(X)
+        y = np.array(y)
+        
+        fold_metrics = []
+        
+        for fold_idx, (train_idx, val_idx) in enumerate(self.skf.split(X, y)):
+            fold_no = fold_idx + 1
+            
+            # Skip folds before start_fold (useful for resuming)
+            if fold_no < start_fold:
+                if verbose:
+                    print("=" * 60)
+                    print(f"Skipping Fold {fold_no}/{self.n_splits} (start_fold={start_fold})")
+                continue
+            
+            if verbose:
+                print("\n" + "=" * 60)
+                print(f"Fold {fold_no}/{self.n_splits}")
+                print(f"Train size: {len(train_idx)} | Val size: {len(val_idx)}")
+                print("=" * 60)
+            
+            X_train, y_train = X[train_idx], y[train_idx]
+            X_val, y_val = X[val_idx], y[val_idx]
+            
+            # Create new model for this fold
+            model = create_model_fn(fold_idx)
+            
+            # Train and evaluate
+            metrics = train_eval_fn(
+                model, X_train, y_train, X_val, y_val, fold_idx
+            )
+            
+            if verbose:
+                print(f"\nFold {fold_no} metrics: {metrics}")
+            
+            fold_metrics.append(metrics)
+        
+        # Calculate summary statistics
+        summary = {}
+        if fold_metrics:
+            metric_names = fold_metrics[0].keys()
+            for name in metric_names:
+                values = [m[name] for m in fold_metrics]
+                summary[name] = {
+                    'mean': float(np.mean(values)),
+                    'std': float(np.std(values)),
+                }
+        
+        if verbose:
+            print("\n" + "=" * 60)
+            print("Cross-Validation Summary:")
+            print("=" * 60)
+            for name, stats in summary.items():
+                print(f"{name}: {stats['mean']:.4f} ± {stats['std']:.4f}")
+            print("=" * 60 + "\n")
+        
+        return fold_metrics, summary
+
+
+# Example cross-validation usage (commented out)
+"""
+# Prepare data for CV
+X_indices = np.arange(len(train_dataset))  # Use indices
+y_labels = np.array([label for _, label in train_dataset])  # Extract labels
+
+# Define model creation function
+def create_model(fold_index):
+    model = ResNet50(num_classes=4)
+    return model
+
+# Define train/eval function
+def train_eval_fold(model, X_train, y_train, X_val, y_val, fold_index):
+    # X_train, y_train are indices and labels
+    # Create data loaders using these indices
+    from torch.utils.data import Subset
+    
+    train_subset = Subset(train_dataset, X_train)
+    val_subset = Subset(train_dataset, X_val)
+    
+    train_loader = DataLoader(train_subset, batch_size=32, shuffle=True)
+    val_loader = DataLoader(val_subset, batch_size=32)
+    
+    # Train the model
+    engine = TrainingEngine(model, device='cuda')
+    history = engine.train(
+        train_loader, val_loader,
+        criterion=nn.CrossEntropyLoss(),
+        optimizer=torch.optim.Adam(model.parameters()),
+        num_epochs=30
+    )
+    
+    # Return metrics
+    return {
+        'val_accuracy': history['val_acc'][-1],
+        'val_loss': history['val_loss'][-1],
+        'train_accuracy': history['train_acc'][-1]
+    }
+
+# Run cross-validation
+cv_helper = CrossValidationHelper(n_splits=5, random_state=42)
+fold_metrics, summary = cv_helper.run(
+    X=X_indices,
+    y=y_labels,
+    create_model_fn=create_model,
+    train_eval_fn=train_eval_fold
+)
+
+print(f"Mean Val Accuracy: {summary['val_accuracy']['mean']:.4f}")
 """
