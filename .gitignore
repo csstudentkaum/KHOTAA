@@ -53,5 +53,5 @@ results/
 !README_assets/*.png
 !README_assets/*.jpg
 
-# Test files
-test_*.py
+# Test files (removed - we want test scripts in repo)
+# test_*.py
