@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
+import time
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -127,16 +128,18 @@ class TrainingEngine:
         
         return epoch_loss, epoch_acc
     
-    def evaluate(self, val_loader, criterion):
+    def evaluate(self, val_loader, criterion, measure_inference_time=False):
         """
         Evaluate model on validation/test set
         
         Args:
             val_loader: DataLoader for validation data
             criterion: Loss function
+            measure_inference_time (bool): Measure inference time per batch
         
         Returns:
-            tuple: (average_loss, accuracy, predictions, labels)
+            tuple: (average_loss, accuracy, predictions, labels, inference_time)
+                   inference_time is None if measure_inference_time=False
         """
         self.model.eval()
         running_loss = 0.0
@@ -145,6 +148,7 @@ class TrainingEngine:
         
         all_predictions = []
         all_labels = []
+        inference_times = []
         
         with torch.no_grad():
             pbar = tqdm(val_loader, desc='Evaluating')
@@ -152,8 +156,21 @@ class TrainingEngine:
             for inputs, labels in pbar:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
                 
+                # Measure inference time if requested
+                if measure_inference_time:
+                    start_time = time.time()
+                
                 # Forward pass
                 outputs = self.model(inputs)
+                
+                if measure_inference_time:
+                    # Synchronize GPU if using CUDA
+                    if self.device.type == 'cuda':
+                        torch.cuda.synchronize()
+                    end_time = time.time()
+                    batch_time = end_time - start_time
+                    inference_times.append(batch_time)
+                
                 loss = criterion(outputs, labels)
                 
                 # Statistics
@@ -167,15 +184,29 @@ class TrainingEngine:
                 all_labels.extend(labels.cpu().numpy())
                 
                 # Update progress bar
-                pbar.set_postfix({
+                pbar_info = {
                     'loss': f'{loss.item():.4f}',
                     'acc': f'{100 * correct / total:.2f}%'
-                })
+                }
+                if measure_inference_time:
+                    pbar_info['time/batch'] = f'{batch_time*1000:.2f}ms'
+                pbar.set_postfix(pbar_info)
         
         epoch_loss = running_loss / total
         epoch_acc = correct / total
         
-        return epoch_loss, epoch_acc, np.array(all_predictions), np.array(all_labels)
+        # Calculate inference time statistics
+        avg_inference_time = None
+        if measure_inference_time and inference_times:
+            avg_inference_time = {
+                'total_time': sum(inference_times),
+                'avg_time_per_batch': np.mean(inference_times),
+                'std_time_per_batch': np.std(inference_times),
+                'avg_time_per_image': np.mean(inference_times) / val_loader.batch_size,
+                'images_per_second': total / sum(inference_times)
+            }
+        
+        return epoch_loss, epoch_acc, np.array(all_predictions), np.array(all_labels), avg_inference_time
     
     def train(self, train_loader, val_loader, criterion, optimizer, 
               num_epochs, scheduler=None, checkpoint_manager=None,
@@ -222,7 +253,7 @@ class TrainingEngine:
             train_loss, train_acc = self.train_epoch(train_loader, criterion, optimizer)
             
             # Validate
-            val_loss, val_acc, _, _ = self.evaluate(val_loader, criterion)
+            val_loss, val_acc, _, _, _ = self.evaluate(val_loader, criterion, measure_inference_time=False)
             
             # Update learning rate
             if scheduler is not None:

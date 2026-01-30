@@ -210,9 +210,20 @@ checkpoint_manager = CheckpointManager(checkpoint_dir=f'checkpoints/resnet50_fol
 checkpoint_manager.load_best_model(model, metric_name='accuracy')
 
 engine = TrainingEngine(model=model, device=device)
-test_loss, test_acc, predictions, true_labels = engine.evaluate(test_loader, criterion, verbose=True)
+
+# Evaluate with inference time tracking
+test_loss, test_acc, predictions, true_labels, inference_time = engine.evaluate(
+    test_loader, 
+    criterion, 
+    measure_inference_time=True
+)
 
 print(f"\nTest Accuracy: {test_acc*100:.2f}%")
+print(f"\nInference Time Statistics:")
+print(f"  Total Time: {inference_time['total_time']:.4f}s")
+print(f"  Avg Time/Batch: {inference_time['avg_time_per_batch']*1000:.2f}ms ± {inference_time['std_time_per_batch']*1000:.2f}ms")
+print(f"  Avg Time/Image: {inference_time['avg_time_per_image']*1000:.2f}ms")
+print(f"  Throughput: {inference_time['images_per_second']:.1f} images/second")
 ```
 
 ---
@@ -297,9 +308,16 @@ Results are reported as **mean ± standard deviation across 5 folds**:
 # Cross-Validation Accuracy: 94.23% ± 1.15%
 # Test Accuracy: 93.78%
 # Average Training Epochs: 24.2 (with early stopping)
+# Inference Time: 3.2ms per image (312 images/second)
 ```
 
 Each fold may stop at different epochs due to early stopping, ensuring optimal performance without overfitting.
+
+**Inference Time Metrics:**
+- **Total Time**: Total time to process all test images
+- **Time per Batch**: Average time to process one batch (with std)
+- **Time per Image**: Average time to classify a single image
+- **Throughput**: Number of images processed per second
 
 ---
 
@@ -313,6 +331,7 @@ All research-standard metrics are automatically calculated:
 - **F1-Score**
 - **AUC-ROC**
 - **MCC** (Matthews Correlation Coefficient)
+- **Inference Time** (ms per image, images per second)
 
 ---
 
@@ -325,4 +344,6 @@ All research-standard metrics are automatically calculated:
 ✓ Progress bars show training progress  
 ✓ Test set untouched until final evaluation  
 ✓ Results reported as mean ± std for research papers  
-✓ Each fold may stop at different epochs (optimal training)
+✓ Each fold may stop at different epochs (optimal training)  
+✓ Inference time measured on test set (important for deployment)  
+✓ Throughput reported in images/second
