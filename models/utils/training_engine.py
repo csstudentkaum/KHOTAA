@@ -12,6 +12,134 @@ import time
 from sklearn.model_selection import StratifiedKFold
 
 
+def create_optimizer(model, optimizer_type='sgd', lr=0.001, momentum=0.8, weight_decay=1e-4):
+    """
+    Create optimizer with recommended defaults for DFU classification
+    
+    Args:
+        model: PyTorch model
+        optimizer_type (str): Type of optimizer ('sgd', 'adam', 'adamw')
+        lr (float): Learning rate (default: 0.001)
+        momentum (float): Momentum for SGD (default: 0.8 as per paper)
+        weight_decay (float): L2 regularization (default: 1e-4)
+    
+    Returns:
+        torch.optim.Optimizer: Configured optimizer
+    
+    Recommended configurations:
+        - SGD: Best for ResNet, DenseNet (as per research papers)
+        - Adam: Good general choice, easier to tune
+        - AdamW: Best for EfficientNet, modern architectures
+    """
+    optimizer_type = optimizer_type.lower()
+    
+    if optimizer_type == 'sgd':
+        # SGD with momentum (as specified in your paper requirements)
+        optimizer = torch.optim.SGD(
+            model.parameters(),
+            lr=lr,
+            momentum=momentum,
+            weight_decay=weight_decay,
+            nesterov=False  # Set to True for Nesterov momentum
+        )
+        print(f"Created SGD optimizer: lr={lr}, momentum={momentum}, weight_decay={weight_decay}")
+    
+    elif optimizer_type == 'adam':
+        # Adam optimizer (adaptive learning rate)
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=lr,
+            betas=(0.9, 0.999),  # Default Adam betas
+            weight_decay=weight_decay
+        )
+        print(f"Created Adam optimizer: lr={lr}, weight_decay={weight_decay}")
+    
+    elif optimizer_type == 'adamw':
+        # AdamW (Adam with decoupled weight decay)
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=lr,
+            betas=(0.9, 0.999),
+            weight_decay=weight_decay
+        )
+        print(f"Created AdamW optimizer: lr={lr}, weight_decay={weight_decay}")
+    
+    else:
+        raise ValueError(f"Unknown optimizer type: {optimizer_type}. Choose 'sgd', 'adam', or 'adamw'")
+    
+    return optimizer
+
+
+def create_scheduler(optimizer, scheduler_type='step', step_size=10, gamma=0.1, **kwargs):
+    """
+    Create learning rate scheduler with recommended defaults
+    
+    Args:
+        optimizer: PyTorch optimizer
+        scheduler_type (str): Type of scheduler ('step', 'cosine', 'plateau', 'exponential')
+        step_size (int): For StepLR, epochs before reducing lr (default: 10)
+        gamma (float): Learning rate decay factor (default: 0.1)
+        **kwargs: Additional scheduler-specific arguments
+    
+    Returns:
+        torch.optim.lr_scheduler: Configured scheduler
+    
+    Scheduler types:
+        - step: Reduces lr every step_size epochs (simple, reliable)
+        - cosine: Cosine annealing (smooth decay, good for long training)
+        - plateau: Reduces when metric plateaus (adaptive)
+        - exponential: Exponential decay (gradual reduction)
+    """
+    scheduler_type = scheduler_type.lower()
+    
+    if scheduler_type == 'step':
+        # StepLR: Decay every step_size epochs
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=step_size,
+            gamma=gamma
+        )
+        print(f"Created StepLR scheduler: step_size={step_size}, gamma={gamma}")
+    
+    elif scheduler_type == 'cosine':
+        # CosineAnnealingLR: Smooth cosine decay
+        T_max = kwargs.get('T_max', 30)  # Maximum epochs
+        eta_min = kwargs.get('eta_min', 1e-6)  # Minimum learning rate
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=T_max,
+            eta_min=eta_min
+        )
+        print(f"Created CosineAnnealingLR scheduler: T_max={T_max}, eta_min={eta_min}")
+    
+    elif scheduler_type == 'plateau':
+        # ReduceLROnPlateau: Reduce when validation metric plateaus
+        mode = kwargs.get('mode', 'min')  # 'min' for loss, 'max' for accuracy
+        patience = kwargs.get('patience', 5)
+        factor = kwargs.get('factor', gamma)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=mode,
+            factor=factor,
+            patience=patience,
+            verbose=True
+        )
+        print(f"Created ReduceLROnPlateau scheduler: mode={mode}, patience={patience}, factor={factor}")
+    
+    elif scheduler_type == 'exponential':
+        # ExponentialLR: Exponential decay
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer,
+            gamma=gamma
+        )
+        print(f"Created ExponentialLR scheduler: gamma={gamma}")
+    
+    else:
+        raise ValueError(f"Unknown scheduler type: {scheduler_type}. Choose 'step', 'cosine', 'plateau', or 'exponential'")
+    
+    return scheduler
+
+
 class EarlyStopping:
     """Early stopping to stop training when validation loss doesn't improve"""
     
@@ -295,7 +423,7 @@ class TrainingEngine:
                         metrics={'val_acc': val_acc, 'val_loss': val_loss}
                     )
                 if verbose:
-                    print(f"⭐ New best model! Val Acc: {val_acc*100:.2f}%")
+                    print(f" New best model! Val Acc: {val_acc*100:.2f}%")
             
             # Check early stopping
             if early_stopper is not None:

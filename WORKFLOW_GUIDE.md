@@ -112,12 +112,29 @@ kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 ---
 
-### **Step 5: Setup Device & Loss Function**
+### **Step 5: Setup Device, Loss Function & Optimizer**
 
 ```python
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 criterion = nn.CrossEntropyLoss()
+
+# Use helper function to create optimizer with recommended defaults
+from models.utils.training_engine import create_optimizer
+
+# Option 1: Use defaults (SGD, lr=0.001, momentum=0.8)
+optimizer = create_optimizer(model)
+
+# Option 2: Customize learning rate
+optimizer = create_optimizer(model, lr=0.01)
+
+# Option 3: Use Adam instead
+optimizer = create_optimizer(model, optimizer_type='adam', lr=0.001)
+
+# Option 4: Full customization
+optimizer = create_optimizer(model, optimizer_type='sgd', lr=0.01, momentum=0.9, weight_decay=5e-4)
 ```
+
+**Note:** The helper function provides recommended defaults based on best practices. For SGD, momentum=0.8 and lr=0.001 work well for most models. You can customize as needed for specific architectures.
 
 ---
 
@@ -146,8 +163,8 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     model = model.to(device)
     
-    # Setup training
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.8)
+    # Setup optimizer using helper function
+    optimizer = create_optimizer(model, lr=0.001)  # Uses SGD with momentum=0.8 by default
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     checkpoint_manager = CheckpointManager(checkpoint_dir=f'checkpoints/resnet50_fold{fold}')
     engine = TrainingEngine(model=model, device=device)
