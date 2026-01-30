@@ -2,6 +2,8 @@
 
 Complete guide on how to use the utility modules in your model notebooks.
 
+**Default Training Method: 5-Fold Cross-Validation** for robust and reliable results.
+
 ---
 
 ## 📁 File Structure
@@ -79,6 +81,9 @@ print(loader.get_class_counts('train'))
 
 ```python
 # Cell 3: Create Custom Dataset
+import numpy as np
+from sklearn.model_selection import StratifiedKFold
+
 class DFUDataset(Dataset):
     def __init__(self, image_paths, labels, transform=None):
         self.image_paths = image_paths
@@ -113,28 +118,27 @@ val_test_transform = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# Load splits
+# Load data for cross-validation
+# Combine train + val for 5-fold cross-validation
 X_train, y_train = loader.load_split_paths('train', shuffle=True)
 X_val, y_val = loader.load_split_paths('valid')
+
+# Combine train and validation for cross-validation
+X_all = X_train + X_val
+y_all = np.concatenate([y_train, y_val])
+
+# Load test set separately (final evaluation only)
 X_test, y_test = loader.load_split_paths('test')
-
-# Create datasets
-train_dataset = DFUDataset(X_train, y_train, transform=train_transform)
-val_dataset = DFUDataset(X_val, y_val, transform=val_test_transform)
 test_dataset = DFUDataset(X_test, y_test, transform=val_test_transform)
-
-# Create dataloaders
-# batch_size=32: Number of images per batch (default as per paper)
-# num_workers=4: Number of CPU processes for parallel data loading (adjust based on your CPU)
-# Note: num_workers is NOT the number of classes! It's for performance optimization.
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 
-print(f"Train batches: {len(train_loader)}")
-print(f"Val batches: {len(val_loader)}")
-print(f"Test batches: {len(test_loader)}")
+# Initialize 5-fold cross-validation
+kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+print(f"Total samples for cross-validation: {len(X_all)}")
+print(f"Test samples (final evaluation): {len(X_test)}")
 print(f"Number of classes: {num_classes}")  # This is 4 for DFU dataset
+print(f"Cross-validation folds: 5")
 ```
 
 ---
@@ -185,23 +189,85 @@ print("Training components initialized!")
 
 ---
 
-### **Step 6: Train the Model**
+### **Step 6: Train Model with 5-Fold Cross-Validation**
 
 ```python
-# Cell 6: Train Model (30 epochs is default)
-# Train for 30 epochs
-history = engine.train(
-    train_loader=train_loader,
-    val_loader=val_loader,
-    criterion=criterion,
-    optimizer=optimizer,
-    num_epochs=30,  # Default
-    scheduler=scheduler,
-    checkpoint_manager=checkpoint_manager
-)
+# Cell 6: 5-Fold Cross-Validation Training
+fold_results = []
 
-print("\nTraining completed!")
-print(f"Best validation accuracy: {max(history['val_acc'])*100:.2f}%")
+for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
+    print(f"\n{'='*60}")
+    print(f"FOLD {fold}/5")
+    print(f"{'='*60}")
+    
+    # Split data for this fold
+    X_train_fold = [X_all[i] for i in train_idx]
+    y_train_fold = y_all[train_idx]
+    X_val_fold = [X_all[i] for i in val_idx]
+    y_val_fold = y_all[val_idx]
+    
+    # Create datasets for this fold
+    train_dataset_fold = DFUDataset(X_train_fold, y_train_fold, transform=train_transform)
+    val_dataset_fold = DFUDataset(X_val_fold, y_val_fold, transform=val_test_transform)
+    
+    # Create loaders for this fold
+    # batch_size=32: Number of images per batch (default as per paper)
+    # num_workers=4: Number of CPU processes for parallel data loading
+    # Note: num_workers is NOT the number of classes! It's for performance optimization.
+    train_loader_fold = DataLoader(train_dataset_fold, batch_size=32, shuffle=True, num_workers=4)
+    val_loader_fold = DataLoader(val_dataset_fold, batch_size=32, shuffle=False, num_workers=4)
+    
+    # Initialize new model for this fold
+    model = models.resnet50(pretrained=True)
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    model = model.to(device)
+    
+    # New optimizer and scheduler for this fold
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.8)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    
+    # Checkpoint manager for this fold
+    checkpoint_manager = CheckpointManager(checkpoint_dir=f'checkpoints/resnet50_fold{fold}')
+    
+    # Training engine for this fold
+    engine = TrainingEngine(model=model, device=device)
+    
+    # Train this fold for 30 epochs
+    history = engine.train(
+        train_loader=train_loader_fold,
+        val_loader=val_loader_fold,
+        criterion=criterion,
+        optimizer=optimizer,
+        num_epochs=30,  # Default
+        scheduler=scheduler,
+        checkpoint_manager=checkpoint_manager
+    )
+    
+    # Store fold results
+    best_val_acc = max(history['val_acc'])
+    fold_results.append({
+        'fold': fold,
+        'best_val_acc': best_val_acc,
+        'final_val_acc': history['val_acc'][-1],
+        'history': history,
+        'model_path': f'checkpoints/resnet50_fold{fold}/best_model.pth'
+    })
+    
+    print(f"\nFold {fold} Best Validation Accuracy: {best_val_acc*100:.2f}%")
+
+# Calculate cross-validation statistics
+avg_acc = np.mean([r['best_val_acc'] for r in fold_results])
+std_acc = np.std([r['best_val_acc'] for r in fold_results])
+
+print(f"\n{'='*60}")
+print(f"5-FOLD CROSS-VALIDATION RESULTS")
+print(f"{'='*60}")
+print(f"Average Accuracy: {avg_acc*100:.2f}% ± {std_acc*100:.2f}%")
+print(f"\nIndividual Fold Results:")
+for r in fold_results:
+    print(f"  Fold {r['fold']}: {r['best_val_acc']*100:.2f}%")
+
+print("\n✓ Cross-validation training completed!")
 ```
 
 ---
@@ -216,16 +282,33 @@ plot_training_history(history, save_path='results/resnet50_training_history.png'
 
 ---
 
-### **Step 8: Evaluate on Test Set**
+### **Step 8: Evaluate on Test Set (Best Fold Model)**
 
 ```python
-# Cell 8: Test Evaluation
-# Load best model
+# Cell 8: Test Evaluation with Best Fold
+# Find the best fold based on validation accuracy
+best_fold_idx = np.argmax([r['best_val_acc'] for r in fold_results])
+best_fold_result = fold_results[best_fold_idx]
+best_fold_num = best_fold_result['fold']
+
+print(f"Best fold: Fold {best_fold_num} with validation accuracy: {best_fold_result['best_val_acc']*100:.2f}%")
+
+# Load the best model from the best fold
+model = models.resnet50(pretrained=True)
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+model = model.to(device)
+
+# Load best model from best fold
+checkpoint_manager = CheckpointManager(checkpoint_dir=f'checkpoints/resnet50_fold{best_fold_num}')
 checkpoint_manager.load_best_model(model, metric_name='accuracy')
+
+# Create training engine for evaluation
+engine = TrainingEngine(model=model, device=device)
 
 # Evaluate on test set
 test_loss, test_acc, predictions, true_labels = engine.evaluate(test_loader, criterion)
 
+print(f"\nFinal Test Set Evaluation (Best Fold {best_fold_num}):")
 print(f"Test Loss: {test_loss:.4f}")
 print(f"Test Accuracy: {test_acc*100:.2f}%")
 ```
@@ -350,6 +433,60 @@ tracker.plot_metrics(save_path='results/training_metrics.png')
 
 ---
 
+## 🔄 Optional: Simple Train/Val/Test Split (No Cross-Validation)
+
+**Note:** The default workflow uses 5-fold cross-validation for robust evaluation.
+Use this simpler approach only if you want faster training without cross-validation.
+
+```python
+# Alternative: Simple Split (No Cross-Validation)
+# Load splits separately
+X_train, y_train = loader.load_split_paths('train', shuffle=True)
+X_val, y_val = loader.load_split_paths('valid')
+X_test, y_test = loader.load_split_paths('test')
+
+# Create datasets
+train_dataset = DFUDataset(X_train, y_train, transform=train_transform)
+val_dataset = DFUDataset(X_val, y_val, transform=val_test_transform)
+test_dataset = DFUDataset(X_test, y_test, transform=val_test_transform)
+
+# Create dataloaders
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
+
+# Define model
+model = models.resnet50(pretrained=True)
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+model = model.to(device)
+
+# Setup training
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.8)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+checkpoint_manager = CheckpointManager(checkpoint_dir='checkpoints/resnet50')
+engine = TrainingEngine(model=model, device=device)
+
+# Train for 30 epochs (single model, no cross-validation)
+history = engine.train(
+    train_loader=train_loader,
+    val_loader=val_loader,
+    criterion=criterion,
+    optimizer=optimizer,
+    num_epochs=30,
+    scheduler=scheduler,
+    checkpoint_manager=checkpoint_manager
+)
+
+print(f"Best validation accuracy: {max(history['val_acc'])*100:.2f}%")
+
+# Evaluate on test set
+checkpoint_manager.load_best_model(model, metric_name='accuracy')
+test_loss, test_acc, predictions, true_labels = engine.evaluate(test_loader, criterion)
+print(f"Test Accuracy: {test_acc*100:.2f}%")
+```
+
+---
+
 ## 💾 Save/Load Model Examples
 
 ### **Save Model**
@@ -429,6 +566,9 @@ print("Metrics saved to results/resnet50_metrics.json")
 8. **Set momentum=0.8** for optimizer as per the paper
 9. **Adjust num_workers** based on your CPU cores (4-8 is typical, 0 if issues occur)
 10. **Number of classes = 4** (Grade 1, 2, 3, 4) - Don't confuse with num_workers!
+11. **Default is 5-fold cross-validation** - More robust evaluation, better for research
+12. **Use simple split if needed** - For faster training without CV (see optional simple split section)
+13. **Best fold model is used for test** - Automatically selects best performing fold for final evaluation
 
 ---
 
