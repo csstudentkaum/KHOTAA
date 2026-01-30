@@ -347,3 +347,295 @@ All research-standard metrics are automatically calculated:
 ✓ Each fold may stop at different epochs (optimal training)  
 ✓ Inference time measured on test set (important for deployment)  
 ✓ Throughput reported in images/second
+
+---
+
+## 🏆 Comparing All 7 Models (Final Model Selection)
+
+After training all 7 models (ResNet50, ResNet101, DenseNet, MobileNet, GoogLeNet, EfficientNetV2S, PFCNN+DRNN) with 5-fold cross-validation, use the **ModelComparison** module to select the best model:
+
+### **Step 10: Model Comparison Setup**
+
+```python
+from utils.model_comparison import ModelComparison
+
+# Initialize comparison
+comparison = ModelComparison()
+
+# Add ResNet50 results
+comparison.add_model_result(
+    model_name='ResNet50',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_resnet50, 'std': std_acc_resnet50},
+        'val_loss': {'mean': avg_loss_resnet50, 'std': std_loss_resnet50}
+    },
+    test_results={
+        'test_accuracy': test_acc_resnet50,
+        'test_loss': test_loss_resnet50,
+        'precision': metrics_resnet50['precision'],
+        'recall': metrics_resnet50['recall'],
+        'f1_score': metrics_resnet50['f1_score'],
+        'specificity': metrics_resnet50['specificity'],
+        'sensitivity': metrics_resnet50['sensitivity'],
+        'mcc': metrics_resnet50['mcc'],
+        'auc': metrics_resnet50['auc']
+    },
+    inference_time=inference_time_resnet50
+)
+
+# Add DenseNet results
+comparison.add_model_result(
+    model_name='DenseNet',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_densenet, 'std': std_acc_densenet},
+        'val_loss': {'mean': avg_loss_densenet, 'std': std_loss_densenet}
+    },
+    test_results={
+        'test_accuracy': test_acc_densenet,
+        'test_loss': test_loss_densenet,
+        'precision': metrics_densenet['precision'],
+        'recall': metrics_densenet['recall'],
+        'f1_score': metrics_densenet['f1_score'],
+        'specificity': metrics_densenet['specificity'],
+        'sensitivity': metrics_densenet['sensitivity'],
+        'mcc': metrics_densenet['mcc'],
+        'auc': metrics_densenet['auc']
+    },
+    inference_time=inference_time_densenet
+)
+
+# Add MobileNet results
+comparison.add_model_result(
+    model_name='MobileNet',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_mobilenet, 'std': std_acc_mobilenet},
+        'val_loss': {'mean': avg_loss_mobilenet, 'std': std_loss_mobilenet}
+    },
+    test_results={
+        'test_accuracy': test_acc_mobilenet,
+        'test_loss': test_loss_mobilenet,
+        'precision': metrics_mobilenet['precision'],
+        'recall': metrics_mobilenet['recall'],
+        'f1_score': metrics_mobilenet['f1_score'],
+        'specificity': metrics_mobilenet['specificity'],
+        'sensitivity': metrics_mobilenet['sensitivity'],
+        'mcc': metrics_mobilenet['mcc'],
+        'auc': metrics_mobilenet['auc']
+    },
+    inference_time=inference_time_mobilenet
+)
+
+# Add GoogLeNet results
+comparison.add_model_result(
+    model_name='GoogLeNet',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_googlenet, 'std': std_acc_googlenet},
+        'val_loss': {'mean': avg_loss_googlenet, 'std': std_loss_googlenet}
+    },
+    test_results={
+        'test_accuracy': test_acc_googlenet,
+        'test_loss': test_loss_googlenet,
+        'precision': metrics_googlenet['precision'],
+        'recall': metrics_googlenet['recall'],
+        'f1_score': metrics_googlenet['f1_score'],
+        'specificity': metrics_googlenet['specificity'],
+        'sensitivity': metrics_googlenet['sensitivity'],
+        'mcc': metrics_googlenet['mcc'],
+        'auc': metrics_googlenet['auc']
+    },
+    inference_time=inference_time_googlenet
+)
+
+# Add ResNet101 results
+comparison.add_model_result(
+    model_name='ResNet101',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_resnet101, 'std': std_acc_resnet101},
+        'val_loss': {'mean': avg_loss_resnet101, 'std': std_loss_resnet101}
+    },
+    test_results={
+        'test_accuracy': test_acc_resnet101,
+        'test_loss': test_loss_resnet101,
+        'precision': metrics_resnet101['precision'],
+        'recall': metrics_resnet101['recall'],
+        'f1_score': metrics_resnet101['f1_score'],
+        'specificity': metrics_resnet101['specificity'],
+        'sensitivity': metrics_resnet101['sensitivity'],
+        'mcc': metrics_resnet101['mcc'],
+        'auc': metrics_resnet101['auc']
+    },
+    inference_time=inference_time_resnet101
+)
+
+# Add EfficientNetV2S results
+comparison.add_model_result(
+    model_name='EfficientNetV2S',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_efficientnet, 'std': std_acc_efficientnet},
+        'val_loss': {'mean': avg_loss_efficientnet, 'std': std_loss_efficientnet}
+    },
+    test_results={
+        'test_accuracy': test_acc_efficientnet,
+        'test_loss': test_loss_efficientnet,
+        'precision': metrics_efficientnet['precision'],
+        'recall': metrics_efficientnet['recall'],
+        'f1_score': metrics_efficientnet['f1_score'],
+        'specificity': metrics_efficientnet['specificity'],
+        'sensitivity': metrics_efficientnet['sensitivity'],
+        'mcc': metrics_efficientnet['mcc'],
+        'auc': metrics_efficientnet['auc']
+    },
+    inference_time=inference_time_efficientnet
+)
+
+# Add PFCNN+DRNN results
+comparison.add_model_result(
+    model_name='PFCNN+DRNN',
+    cv_results={
+        'val_accuracy': {'mean': avg_acc_pfcnn, 'std': std_acc_pfcnn},
+        'val_loss': {'mean': avg_loss_pfcnn, 'std': std_loss_pfcnn}
+    },
+    test_results={
+        'test_accuracy': test_acc_pfcnn,
+        'test_loss': test_loss_pfcnn,
+        'precision': metrics_pfcnn['precision'],
+        'recall': metrics_pfcnn['recall'],
+        'f1_score': metrics_pfcnn['f1_score'],
+        'specificity': metrics_pfcnn['specificity'],
+        'sensitivity': metrics_pfcnn['sensitivity'],
+        'mcc': metrics_pfcnn['mcc'],
+        'auc': metrics_pfcnn['auc']
+    },
+    inference_time=inference_time_pfcnn
+)
+```
+
+---
+
+### **Step 11: Print Comparison & Select Best Model**
+
+```python
+# Print comprehensive comparison table
+comparison.print_comparison_table()
+
+# Select best model by different criteria:
+
+# 1. Best by Cross-Validation Accuracy (most reliable for generalization)
+best_model = comparison.select_best_model(criterion='cv_val_accuracy_mean')
+
+# 2. Best by Test Accuracy
+best_by_test = comparison.select_best_model(criterion='test_accuracy')
+
+# 3. Best by F1 Score (balanced precision/recall)
+best_by_f1 = comparison.select_best_model(criterion='test_f1')
+
+# 4. Best by MCC (Matthews Correlation Coefficient - handles class imbalance)
+best_by_mcc = comparison.select_best_model(criterion='test_mcc')
+
+# 5. Fastest model (lowest inference time - important for deployment)
+fastest = comparison.select_best_model(criterion='inference_time_ms', minimize=True)
+
+# Get top 3 models for potential ensemble
+top_3_models = comparison.select_top_k_models(k=3, criterion='test_accuracy')
+
+# Get performance-based weights for ensemble (if needed)
+ensemble_weights = comparison.get_ensemble_weights_by_performance(criterion='cv_val_accuracy_mean')
+```
+
+**Example Output:**
+```
+====================================================================================================
+MODEL COMPARISON RESULTS
+====================================================================================================
+
+1. CROSS-VALIDATION RESULTS (5-Fold)
+----------------------------------------------------------------------------------------------------
+Model            Val Acc (Mean)  Val Acc (Std)  Val Loss (Mean)
+DenseNet         0.9512          0.0098         0.198
+ResNet101        0.9489          0.0102         0.205
+ResNet50         0.9423          0.0115         0.234
+EfficientNetV2S  0.9401          0.0120         0.241
+GoogLeNet        0.9378          0.0125         0.248
+MobileNet        0.9245          0.0145         0.289
+PFCNN+DRNN       0.9198          0.0156         0.301
+
+2. TEST SET RESULTS (Hold-out)
+----------------------------------------------------------------------------------------------------
+Model            test_accuracy  test_precision  test_recall  test_f1  test_specificity  test_sensitivity  test_mcc  test_auc
+DenseNet         0.9467         0.95            0.94         0.945    0.99              0.94              0.93      0.98
+ResNet101        0.9445         0.94            0.94         0.942    0.98              0.94              0.92      0.97
+ResNet50         0.9378         0.94            0.93         0.935    0.98              0.93              0.91      0.97
+EfficientNetV2S  0.9345         0.93            0.93         0.930    0.98              0.93              0.90      0.96
+GoogLeNet        0.9312         0.93            0.92         0.925    0.97              0.92              0.89      0.96
+MobileNet        0.9178         0.92            0.91         0.915    0.97              0.91              0.87      0.95
+PFCNN+DRNN       0.9134         0.91            0.91         0.910    0.96              0.91              0.86      0.94
+
+3. INFERENCE TIME
+----------------------------------------------------------------------------------------------------
+Model            Time per Image (ms)  Throughput (FPS)
+MobileNet        2.15                 465.1
+ResNet50         2.83                 357.1
+GoogLeNet        3.21                 311.5
+EfficientNetV2S  3.67                 272.5
+ResNet101        4.12                 242.7
+DenseNet         4.56                 219.3
+PFCNN+DRNN       5.89                 169.8
+
+====================================================================================================
+
+============================================================
+BEST MODEL SELECTED BY: test_f1 (maximize)
+============================================================
+Model: DenseNet
+test_f1: 0.9450
+============================================================
+
+============================================================
+BEST MODEL SELECTED BY: inference_time_ms (minimize)
+============================================================
+Model: MobileNet
+inference_time_ms: 2.1500
+============================================================
+```
+
+---
+
+### **Step 12: Generate Visualizations & Export Results**
+
+```python
+# Create comprehensive comparison plots
+comparison.plot_comparison(save_path='results/all_models_comparison.png')
+
+# Save comparison results to JSON
+comparison.save_results(save_path='results/all_models_comparison.json')
+
+# Generate LaTeX table for research paper
+latex_table = comparison.generate_latex_table()
+
+# Save LaTeX table to file
+with open('results/models_comparison_table.tex', 'w') as f:
+    f.write(latex_table)
+
+print("\nModel comparison complete!")
+print("Best model for deployment:", best_by_f1['model_name'])
+print("Fastest model:", fastest['model_name'])
+```
+
+---
+
+## Final Model Selection Criteria
+
+**For Medical Applications (DFU Classification):**
+
+1. **Primary:** Highest F1-Score or MCC (balanced performance across all classes)
+2. **Secondary:** High Specificity (minimize false positives - avoid unnecessary interventions)
+3. **Tertiary:** High Sensitivity (minimize false negatives - catch all serious cases)
+4. **Consideration:** Inference time (real-time capability for clinical use)
+
+**Recommended Selection Strategy:**
+- Use **Cross-Validation Accuracy** for initial ranking
+- Verify with **Test F1-Score** and **MCC** for final selection
+- Check **inference time** for deployment feasibility
+- If top 2-3 models have similar performance, consider ensemble
+
+---
