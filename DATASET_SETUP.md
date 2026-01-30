@@ -59,8 +59,6 @@ python3 test_dataset_loader.py
 
 ## 🧪 Using the Dataset in Notebooks
 
-## 🧪 Using the Dataset in Notebooks
-
 The dataset loader is ready to use in your model notebooks:
 
 ```python
