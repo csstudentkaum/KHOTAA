@@ -1,0 +1,238 @@
+"""
+Training Engine - PyTorch Training & Evaluation Runner
+Handles the complete training loop and evaluation
+"""
+
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import numpy as np
+
+
+class TrainingEngine:
+    """Complete training and evaluation engine for PyTorch models"""
+    
+    def __init__(self, model, device='cuda'):
+        """
+        Initialize training engine
+        
+        Args:
+            model: PyTorch model
+            device (str): Device to use ('cuda' or 'cpu')
+        """
+        self.model = model
+        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
+        self.model.to(self.device)
+        print(f"🚀 Training on: {self.device}")
+    
+    def train_epoch(self, train_loader, criterion, optimizer):
+        """
+        Train for one epoch
+        
+        Args:
+            train_loader: DataLoader for training data
+            criterion: Loss function
+            optimizer: Optimizer
+        
+        Returns:
+            tuple: (average_loss, accuracy)
+        """
+        self.model.train()
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        
+        # Progress bar
+        pbar = tqdm(train_loader, desc='Training')
+        
+        for inputs, labels in pbar:
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
+            
+            # Zero gradients
+            optimizer.zero_grad()
+            
+            # Forward pass
+            outputs = self.model(inputs)
+            loss = criterion(outputs, labels)
+            
+            # Backward pass
+            loss.backward()
+            optimizer.step()
+            
+            # Statistics
+            running_loss += loss.item() * inputs.size(0)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            
+            # Update progress bar
+            pbar.set_postfix({
+                'loss': f'{loss.item():.4f}',
+                'acc': f'{100 * correct / total:.2f}%'
+            })
+        
+        epoch_loss = running_loss / total
+        epoch_acc = correct / total
+        
+        return epoch_loss, epoch_acc
+    
+    def evaluate(self, val_loader, criterion):
+        """
+        Evaluate model on validation/test set
+        
+        Args:
+            val_loader: DataLoader for validation data
+            criterion: Loss function
+        
+        Returns:
+            tuple: (average_loss, accuracy, predictions, labels)
+        """
+        self.model.eval()
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        
+        all_predictions = []
+        all_labels = []
+        
+        with torch.no_grad():
+            pbar = tqdm(val_loader, desc='Evaluating')
+            
+            for inputs, labels in pbar:
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+                
+                # Forward pass
+                outputs = self.model(inputs)
+                loss = criterion(outputs, labels)
+                
+                # Statistics
+                running_loss += loss.item() * inputs.size(0)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+                
+                # Store predictions
+                all_predictions.extend(predicted.cpu().numpy())
+                all_labels.extend(labels.cpu().numpy())
+                
+                # Update progress bar
+                pbar.set_postfix({
+                    'loss': f'{loss.item():.4f}',
+                    'acc': f'{100 * correct / total:.2f}%'
+                })
+        
+        epoch_loss = running_loss / total
+        epoch_acc = correct / total
+        
+        return epoch_loss, epoch_acc, np.array(all_predictions), np.array(all_labels)
+    
+    def train(self, train_loader, val_loader, criterion, optimizer, 
+              num_epochs, scheduler=None, checkpoint_manager=None):
+        """
+        Complete training loop
+        
+        Args:
+            train_loader: Training DataLoader
+            val_loader: Validation DataLoader
+            criterion: Loss function
+            optimizer: Optimizer
+            num_epochs (int): Number of epochs to train
+            scheduler: Learning rate scheduler (optional)
+            checkpoint_manager: CheckpointManager instance (optional)
+        
+        Returns:
+            dict: Training history
+        """
+        history = {
+            'train_loss': [],
+            'train_acc': [],
+            'val_loss': [],
+            'val_acc': []
+        }
+        
+        best_val_acc = 0.0
+        
+        for epoch in range(num_epochs):
+            print(f"\n{'='*60}")
+            print(f"Epoch {epoch+1}/{num_epochs}")
+            print(f"{'='*60}")
+            
+            # Train
+            train_loss, train_acc = self.train_epoch(train_loader, criterion, optimizer)
+            
+            # Validate
+            val_loss, val_acc, _, _ = self.evaluate(val_loader, criterion)
+            
+            # Update learning rate
+            if scheduler is not None:
+                scheduler.step()
+                current_lr = optimizer.param_groups[0]['lr']
+                print(f"📊 Learning Rate: {current_lr:.6f}")
+            
+            # Save history
+            history['train_loss'].append(train_loss)
+            history['train_acc'].append(train_acc)
+            history['val_loss'].append(val_loss)
+            history['val_acc'].append(val_acc)
+            
+            # Print epoch results
+            print(f"\n📈 Epoch {epoch+1} Results:")
+            print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%")
+            print(f"   Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc*100:.2f}%")
+            
+            # Save checkpoint
+            if checkpoint_manager is not None:
+                checkpoint_manager.save_checkpoint(
+                    model=self.model,
+                    optimizer=optimizer,
+                    epoch=epoch+1,
+                    metrics={
+                        'train_loss': train_loss,
+                        'train_acc': train_acc,
+                        'val_loss': val_loss,
+                        'val_acc': val_acc
+                    }
+                )
+            
+            # Save best model
+            if val_acc > best_val_acc:
+                best_val_acc = val_acc
+                if checkpoint_manager is not None:
+                    checkpoint_manager.save_best_model(
+                        model=self.model,
+                        metrics={'val_acc': val_acc, 'val_loss': val_loss}
+                    )
+                print(f"⭐ New best model! Val Acc: {val_acc*100:.2f}%")
+        
+        print(f"\n{'='*60}")
+        print(f"✅ Training Complete!")
+        print(f"🏆 Best Validation Accuracy: {best_val_acc*100:.2f}%")
+        print(f"{'='*60}\n")
+        
+        return history
+
+
+# Example usage (commented out)
+"""
+# Initialize training engine
+engine = TrainingEngine(model=model, device='cuda')
+
+# Train model
+history = engine.train(
+    train_loader=train_loader,
+    val_loader=val_loader,
+    criterion=nn.CrossEntropyLoss(),
+    optimizer=optimizer,
+    num_epochs=50,
+    scheduler=scheduler,
+    checkpoint_manager=checkpoint_manager
+)
+
+# Evaluate on test set
+test_loss, test_acc, predictions, labels = engine.evaluate(
+    test_loader, 
+    criterion=nn.CrossEntropyLoss()
+)
+print(f"Test Accuracy: {test_acc*100:.2f}%")
+"""
