@@ -232,7 +232,7 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
     # Training engine for this fold
     engine = TrainingEngine(model=model, device=device)
     
-    # Train this fold for 30 epochs
+    # Train this fold for 30 epochs with verbose output
     history = engine.train(
         train_loader=train_loader_fold,
         val_loader=val_loader_fold,
@@ -240,7 +240,8 @@ for fold, (train_idx, val_idx) in enumerate(kfold.split(X_all, y_all), 1):
         optimizer=optimizer,
         num_epochs=30,  # Default
         scheduler=scheduler,
-        checkpoint_manager=checkpoint_manager
+        checkpoint_manager=checkpoint_manager,
+        verbose=True  # Show detailed progress for each epoch
     )
     
     # Store fold results
@@ -305,8 +306,12 @@ checkpoint_manager.load_best_model(model, metric_name='accuracy')
 # Create training engine for evaluation
 engine = TrainingEngine(model=model, device=device)
 
-# Evaluate on test set
-test_loss, test_acc, predictions, true_labels = engine.evaluate(test_loader, criterion)
+# Evaluate on test set with verbose output
+test_loss, test_acc, predictions, true_labels = engine.evaluate(
+    test_loader, 
+    criterion, 
+    verbose=True  # Show detailed progress during evaluation
+)
 
 print(f"\nFinal Test Set Evaluation (Best Fold {best_fold_num}):")
 print(f"Test Loss: {test_loss:.4f}")
@@ -395,11 +400,20 @@ If you want more control, use utilities piece by piece:
 tracker = MetricsTracker()
 
 for epoch in range(30):
-    # Train one epoch
-    train_loss, train_acc = engine.train_epoch(train_loader, criterion, optimizer)
+    # Train one epoch with verbose output
+    train_loss, train_acc = engine.train_epoch(
+        train_loader, 
+        criterion, 
+        optimizer, 
+        verbose=True  # Show progress bar during training
+    )
     
-    # Validate
-    val_loss, val_acc, _, _ = engine.evaluate(val_loader, criterion)
+    # Validate with verbose output
+    val_loss, val_acc, _, _ = engine.evaluate(
+        val_loader, 
+        criterion, 
+        verbose=True  # Show progress bar during validation
+    )
     
     # Update scheduler
     scheduler.step()
@@ -474,7 +488,8 @@ history = engine.train(
     optimizer=optimizer,
     num_epochs=30,
     scheduler=scheduler,
-    checkpoint_manager=checkpoint_manager
+    checkpoint_manager=checkpoint_manager,
+    verbose=True  # Show detailed progress for each epoch
 )
 
 print(f"Best validation accuracy: {max(history['val_acc'])*100:.2f}%")
@@ -569,6 +584,7 @@ print("Metrics saved to results/resnet50_metrics.json")
 11. **Default is 5-fold cross-validation** - More robust evaluation, better for research
 12. **Use simple split if needed** - For faster training without CV (see optional simple split section)
 13. **Best fold model is used for test** - Automatically selects best performing fold for final evaluation
+14. **verbose=True is set by default** - Shows detailed progress bars and epoch information during training/evaluation
 
 ---
 
