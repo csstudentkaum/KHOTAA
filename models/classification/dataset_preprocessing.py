@@ -35,20 +35,22 @@ class DFUPreprocessing:
 
         Preprocessing steps:
         1. Resize to 224x224 (standard input size)
-        2. RandomHorizontalFlip (50% chance) - accounts for left/right foot orientation
-        3. RandomRotation (±15°) - simulates camera angle variation
-        4. ColorJitter - simulates lighting conditions
+        2. RandomHorizontalFlip (50% chance) - horizontal flip
+        3. RandomVerticalFlip (30% chance) - vertical flip
+        4. RandomRotation (±15°) - simulates camera angle variation
+        5. ColorJitter - simulates lighting conditions
            - brightness: ±20% (home lighting variance)
            - contrast: ±20% (flash/no flash)
            - saturation: ±5% (conservative, preserves tissue color)
            - hue: ±2% (phone camera white balance differences)
-        5. GaussianBlur - simulates focus variance and motion blur
-        6. ToTensor - converts PIL image to tensor [0,1]
-        7. Normalize - ImageNet normalization for pretrained models
+        6. GaussianBlur - simulates focus variance and motion blur
+        7. ToTensor - converts PIL image to tensor [0,1]
+        8. Normalize - ImageNet normalization for pretrained models
         """
         return transforms.Compose([
-            transforms.Resize((224, 224)),              # Resize to standard size
-            transforms.RandomHorizontalFlip(p=0.5),     # 50% horizontal flip
+            transforms.Resize((224, 224)),               # Resize to standard size
+            transforms.RandomHorizontalFlip(p=0.5),      # 50% horizontal flip
+            transforms.RandomVerticalFlip(p=0.3),        # 30% vertical flip
             transforms.RandomRotation(degrees=15),       # ±15° rotation
             transforms.ColorJitter(                      # Color augmentation
                 brightness=0.2,                          #   ±20% brightness
