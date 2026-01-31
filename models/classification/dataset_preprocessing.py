@@ -1,5 +1,6 @@
 """
 Preprocessing for DFU classification.
+Unified across all models.
 """
 
 import torch
@@ -31,27 +32,31 @@ class DFUPreprocessing:
     def _build_train(self):
         """
         Build training transforms with augmentation.
-        
+
         Preprocessing steps:
         1. Resize to 224x224 (standard input size)
-        2. RandomHorizontalFlip (50% chance) - adds positional variance
-        3. RandomRotation (±10°) - simulates phone angle variance
-        4. ColorJitter - simulates different lighting/cameras
-           - brightness: ±15% (room lighting)
-           - contrast: ±15% (camera settings)
-           - saturation: ±5% (very conservative, preserves tissue color)
-        5. ToTensor - converts PIL image to tensor [0,1]
-        6. Normalize - ImageNet normalization for pretrained models
+        2. RandomHorizontalFlip (50% chance) - accounts for left/right foot orientation
+        3. RandomRotation (±15°) - simulates camera angle variation
+        4. ColorJitter - simulates lighting conditions
+           - brightness: ±20% (home lighting variance)
+           - contrast: ±20% (flash/no flash)
+           - saturation: ±5% (conservative, preserves tissue color)
+           - hue: ±2% (phone camera white balance differences)
+        5. GaussianBlur - simulates focus variance and motion blur
+        6. ToTensor - converts PIL image to tensor [0,1]
+        7. Normalize - ImageNet normalization for pretrained models
         """
         return transforms.Compose([
             transforms.Resize((224, 224)),              # Resize to standard size
             transforms.RandomHorizontalFlip(p=0.5),     # 50% horizontal flip
-            transforms.RandomRotation(degrees=10),       # ±10° rotation
+            transforms.RandomRotation(degrees=15),       # ±15° rotation
             transforms.ColorJitter(                      # Color augmentation
-                brightness=0.15,                         #   ±15% brightness
-                contrast=0.15,                           #   ±15% contrast
-                saturation=0.05                          #   ±5% saturation (conservative)
+                brightness=0.2,                          #   ±20% brightness
+                contrast=0.2,                            #   ±20% contrast
+                saturation=0.05,                         #   ±5% saturation (conservative)
+                hue=0.02                                 #   ±2% hue (white balance)
             ),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.5)),  # Focus/shake blur
             transforms.ToTensor(),                       # Convert to tensor [0,1]
             transforms.Normalize(self.mean, self.std)    # ImageNet normalization
         ])
@@ -80,6 +85,3 @@ class DFUPreprocessing:
     def get_valid_test_transforms(self):
         """Get validation/test transforms (no augmentation)."""
         return self.valid_test_transforms
-
-
-
