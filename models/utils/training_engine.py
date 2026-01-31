@@ -403,6 +403,7 @@ class TrainingEngine:
             # Save checkpoint
             if checkpoint_manager is not None:
                 checkpoint_manager.save_checkpoint(
+                    fold_index=0,  # Using 0 since we create separate managers per fold
                     model=self.model,
                     optimizer=optimizer,
                     epoch=epoch+1,
@@ -419,6 +420,7 @@ class TrainingEngine:
                 best_val_acc = val_acc
                 if checkpoint_manager is not None:
                     checkpoint_manager.save_best_model(
+                        fold_index=0,  # Using 0 since we create separate managers per fold
                         model=self.model,
                         metrics={'val_acc': val_acc, 'val_loss': val_loss}
                     )
