@@ -35,6 +35,7 @@ sys.path.append('../')
 sys.path.append('./')
 
 from dataset_loader import SplitFolderDatasetLoader
+from dataset_preprocessing import DFUPreprocessing
 from utils.checkpoint_manager import CheckpointManager
 from utils.training_engine import TrainingEngine
 from utils.metrics_evaluator import (
@@ -55,7 +56,34 @@ num_classes = loader.get_num_classes()
 
 ---
 
-### **Step 3: Create Dataset Class**
+### **Step 3: Initialize Preprocessing**
+
+```python
+# Initialize DFU preprocessing with data augmentation
+preprocessor = DFUPreprocessing()
+
+# Get transforms
+train_transform = preprocessor.get_train_transforms()
+val_test_transform = preprocessor.get_valid_test_transforms()
+```
+
+**Preprocessing Features:**
+- **Training Augmentation:**
+  - Resize to 224×224
+  - Random horizontal flip (50%)
+  - Random vertical flip (30%)
+  - Random rotation (±15°)
+  - Color jitter (brightness, contrast, saturation, hue)
+  - Gaussian blur (simulates focus variance)
+  - ImageNet normalization
+
+- **Validation/Test:**
+  - Resize to 224×224
+  - ImageNet normalization only (no augmentation)
+
+---
+
+### **Step 4: Create Dataset Class**
 
 ```python
 class DFUDataset(Dataset):
@@ -73,26 +101,11 @@ class DFUDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         return image, self.labels[idx]
-
-# Transformations
-train_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomRotation(10),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
-
-val_test_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
 ```
 
 ---
 
-### **Step 4: Prepare Data for Cross-Validation**
+### **Step 5: Prepare Data for Cross-Validation**
 
 ```python
 # Combine train + validation for 5-fold CV
@@ -112,7 +125,7 @@ kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 ---
 
-### **Step 5: Setup Device, Loss Function & Optimizer**
+### **Step 6: Setup Device, Loss Function & Optimizer**
 
 ```python
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -138,7 +151,7 @@ optimizer = create_optimizer(model, optimizer_type='sgd', lr=0.01, momentum=0.9,
 
 ---
 
-### **Step 6: 5-Fold Cross-Validation Training**
+### **Step 7: 5-Fold Cross-Validation Training**
 
 ```python
 fold_results = []
@@ -212,7 +225,7 @@ print(f"{'='*60}")
 
 ---
 
-### **Step 7: Test Set Evaluation**
+### **Step 8: Test Set Evaluation**
 
 ```python
 # Load best fold model
@@ -245,7 +258,7 @@ print(f"  Throughput: {inference_time['images_per_second']:.1f} images/second")
 
 ---
 
-### **Step 8: Calculate Metrics**
+### **Step 9: Calculate Metrics**
 
 ```python
 # Get probabilities for AUC
@@ -273,7 +286,7 @@ print_metrics(metrics, title="ResNet50 Results")
 
 ---
 
-### **Step 9: Visualizations**
+### **Step 10: Visualizations**
 
 ```python
 # Confusion Matrix
@@ -371,7 +384,7 @@ All research-standard metrics are automatically calculated:
 
 After training all 7 models (ResNet50, ResNet101, DenseNet, MobileNet, GoogLeNet, EfficientNetV2S, PFCNN+DRNN) with 5-fold cross-validation, use the **ModelComparison** module to select the best model:
 
-### **Step 10: Model Comparison Setup**
+### **Step 11: Model Comparison Setup**
 
 ```python
 from utils.model_comparison import ModelComparison
@@ -529,7 +542,7 @@ comparison.add_model_result(
 
 ---
 
-### **Step 11: Print Comparison & Select Best Model**
+### **Step 12: Print Comparison & Select Best Model**
 
 ```python
 # Print comprehensive comparison table
@@ -617,7 +630,7 @@ inference_time_ms: 2.1500
 
 ---
 
-### **Step 12: Generate Visualizations & Export Results**
+### **Step 13: Generate Visualizations & Export Results**
 
 ```python
 # Create comprehensive comparison plots
