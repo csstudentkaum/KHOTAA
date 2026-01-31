@@ -27,6 +27,7 @@ checkpoints/
 # Dataset (DO NOT UPLOAD TO GITHUB)
 dataset/
 data/
+dfu-dataset-annotated-into-4-classes/
 
 # IDE
 .vscode/
