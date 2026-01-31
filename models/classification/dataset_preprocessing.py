@@ -1,6 +1,5 @@
 """
-Preprocessing module for Diabetic Foot Ulcer (DFU) classification.
-Similar structure to dataset_loader.py for consistency.
+Preprocessing for DFU classification.
 """
 
 import torch
@@ -9,127 +8,78 @@ from torchvision import transforms
 
 class DFUPreprocessing:
     """
-    Preprocessing manager for DFU classification.
-    Provides standardized transforms across all models.
+    Preprocessing for DFU dataset.
+    Provides train and valid/test transforms.
     """
     
-    def __init__(
-        self,
-        use_horizontal_flip=True,
-        rotation_degrees=10,
-        brightness=0.15,
-        contrast=0.15,
-        saturation=0.05,
-        mean=(0.485, 0.456, 0.406),
-        std=(0.229, 0.224, 0.225)
-    ):
-        """
-        Initialize DFU preprocessing.
+    def __init__(self):
+        """Initialize with default DFU preprocessing configuration."""
         
-        Args:
-            use_horizontal_flip (bool): Apply horizontal flip. Default: True
-            rotation_degrees (float): Max rotation angle. Default: 10
-            brightness (float): Brightness jitter factor. Default: 0.15
-            contrast (float): Contrast jitter factor. Default: 0.15
-            saturation (float): Saturation jitter factor. Default: 0.05
-            mean (tuple): Normalization mean (ImageNet default)
-            std (tuple): Normalization std (ImageNet default)
-        """
-        self.use_horizontal_flip = use_horizontal_flip
-        self.rotation_degrees = rotation_degrees
-        self.brightness = brightness
-        self.contrast = contrast
-        self.saturation = saturation
-        self.mean = mean
-        self.std = std
+        # ImageNet normalization constants
+        self.mean = (0.485, 0.456, 0.406)
+        self.std = (0.229, 0.224, 0.225)
         
         # Build transforms
-        self._train_transforms = self._build_train_transforms()
-        self._eval_transforms = self._build_eval_transforms()
+        self.train_transforms = self._build_train()
+        self.valid_test_transforms = self._build_valid_test()
         
-        # Print configuration
-        print(f"[DFUPreprocessing] Initialized")
-        print(f"[DFUPreprocessing] Horizontal flip: {self.use_horizontal_flip}")
-        print(f"[DFUPreprocessing] Rotation: ±{self.rotation_degrees}°")
-        print(f"[DFUPreprocessing] Color jitter: brightness={self.brightness}, "
-              f"contrast={self.contrast}, saturation={self.saturation}")
-        print(f"[DFUPreprocessing] Normalization: ImageNet (mean={self.mean}, std={self.std})")
+        print("[DFUPreprocessing] Initialized")
+        print(f"[DFUPreprocessing] Image size: 224x224")
+        print(f"[DFUPreprocessing] Train: with augmentation")
+        print(f"[DFUPreprocessing] Valid/Test: no augmentation")
     
-    def _build_train_transforms(self):
-        """Build training transforms with augmentation."""
-        transform_list = []
+    def _build_train(self):
+        """
+        Build training transforms with augmentation.
         
-        if self.use_horizontal_flip:
-            transform_list.append(transforms.RandomHorizontalFlip(p=0.5))
-        
-        if self.rotation_degrees > 0:
-            transform_list.append(transforms.RandomRotation(degrees=self.rotation_degrees))
-        
-        if self.brightness > 0 or self.contrast > 0 or self.saturation > 0:
-            transform_list.append(
-                transforms.ColorJitter(
-                    brightness=self.brightness,
-                    contrast=self.contrast,
-                    saturation=self.saturation,
-                    hue=0.0
-                )
-            )
-        
-        transform_list.extend([
-            transforms.ToTensor(),
-            transforms.Normalize(self.mean, self.std)
-        ])
-        
-        return transforms.Compose(transform_list)
-    
-    def _build_eval_transforms(self):
-        """Build evaluation transforms (no augmentation)."""
+        Preprocessing steps:
+        1. Resize to 224x224 (standard input size)
+        2. RandomHorizontalFlip (50% chance) - adds positional variance
+        3. RandomRotation (±10°) - simulates phone angle variance
+        4. ColorJitter - simulates different lighting/cameras
+           - brightness: ±15% (room lighting)
+           - contrast: ±15% (camera settings)
+           - saturation: ±5% (very conservative, preserves tissue color)
+        5. ToTensor - converts PIL image to tensor [0,1]
+        6. Normalize - ImageNet normalization for pretrained models
+        """
         return transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(self.mean, self.std)
+            transforms.Resize((224, 224)),              # Resize to standard size
+            transforms.RandomHorizontalFlip(p=0.5),     # 50% horizontal flip
+            transforms.RandomRotation(degrees=10),       # ±10° rotation
+            transforms.ColorJitter(                      # Color augmentation
+                brightness=0.15,                         #   ±15% brightness
+                contrast=0.15,                           #   ±15% contrast
+                saturation=0.05                          #   ±5% saturation (conservative)
+            ),
+            transforms.ToTensor(),                       # Convert to tensor [0,1]
+            transforms.Normalize(self.mean, self.std)    # ImageNet normalization
+        ])
+    
+    def _build_valid_test(self):
+        """
+        Build validation/test transforms without augmentation.
+        
+        Preprocessing steps:
+        1. Resize to 224x224 (standard input size)
+        2. ToTensor - converts PIL image to tensor [0,1]
+        3. Normalize - ImageNet normalization for pretrained models
+        
+        No augmentation to ensure consistent evaluation.
+        """
+        return transforms.Compose([
+            transforms.Resize((224, 224)),              # Resize to standard size
+            transforms.ToTensor(),                       # Convert to tensor [0,1]
+            transforms.Normalize(self.mean, self.std)    # ImageNet normalization
         ])
     
     def get_train_transforms(self):
-        """Get training transforms."""
-        return self._train_transforms
+        """Get training transforms (with augmentation)."""
+        return self.train_transforms
     
-    def get_eval_transforms(self):
-        """Get evaluation transforms."""
-        return self._eval_transforms
-    
-    def unnormalize_tensor(self, tensor):
-        """
-        Unnormalize a tensor for visualization.
-        
-        Args:
-            tensor: Normalized tensor (C, H, W)
-        
-        Returns:
-            Unnormalized tensor in [0, 1] range
-        """
-        mean_t = torch.tensor(self.mean).view(3, 1, 1)
-        std_t = torch.tensor(self.std).view(3, 1, 1)
-        return (tensor * std_t + mean_t).clamp(0, 1)
-    
-    def tensor_to_image(self, tensor):
-        """
-        Convert normalized tensor to numpy image.
-        
-        Args:
-            tensor: Normalized tensor (C, H, W)
-        
-        Returns:
-            Numpy array (H, W, C) in [0, 1] range
-        """
-        unnorm = self.unnormalize_tensor(tensor)
-        return unnorm.permute(1, 2, 0).numpy()
+    def get_valid_test_transforms(self):
+        """Get validation/test transforms (no augmentation)."""
+        return self.valid_test_transforms
 
 
-# Default configuration for consistency across all models
-DEFAULT_CONFIG = {
-    'use_horizontal_flip': True,
-    'rotation_degrees': 10,
-    'brightness': 0.15,
-    'contrast': 0.15,
-    'saturation': 0.05,
-}
+
