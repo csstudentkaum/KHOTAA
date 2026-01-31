@@ -233,7 +233,6 @@ class CheckpointManager:
             json.dump({'score': metrics.get(metric_name, 0)}, f)
         
         print(f"SUCCESS: Best model saved: {path}")
-        print(f"   {metric_name}: {metrics.get(metric_name, 'N/A')}")
     
     def load_best_model(self, fold_index, create_model_fn, metric_name='accuracy'):
         """
