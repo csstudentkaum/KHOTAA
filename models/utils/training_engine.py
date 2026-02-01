@@ -422,10 +422,11 @@ class TrainingEngine:
                     checkpoint_manager.save_best_model(
                         fold_index=0,  # Using 0 since we create separate managers per fold
                         model=self.model,
-                        metrics={'val_acc': val_acc, 'val_loss': val_loss}
+                        metrics={'accuracy': val_acc, 'val_loss': val_loss},  # Fixed: use 'accuracy' key
+                        metric_name='accuracy'
                     )
                 if verbose:
-                    print(f" New best model! Val Acc: {val_acc*100:.2f}%")
+                    print(f"New best model! Val Acc: {val_acc*100:.2f}%")
             
             # Check early stopping
             if early_stopper is not None:
