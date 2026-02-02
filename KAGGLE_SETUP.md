@@ -224,7 +224,7 @@ test_loader = DataLoader(
 **Python Cell:**
 
 ```python
-# VERIFY RESULTS ARE SAVED
+# VERIFY CHECKPOINTS ARE SAVED
 import os
 
 results_dir = '/kaggle/working/checkpoints'
