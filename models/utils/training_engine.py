@@ -426,7 +426,7 @@ class TrainingEngine:
                         metric_name='accuracy'
                     )
                 if verbose:
-                    print(f"%%%%%New best model! Val Acc: {val_acc*100:.2f}%")
+                    print(f"New best model! Val Acc: {val_acc*100:.2f}%")
             
             # Check early stopping
             if early_stopper is not None:
