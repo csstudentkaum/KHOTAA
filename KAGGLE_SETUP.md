@@ -145,7 +145,7 @@ print(f"Current directory: {os.getcwd()}")
 ```python
 # For Kaggle public dataset
 loader = SplitFolderDatasetLoader(
-    root_dir='/kaggle/input/dfu-dataset-annotated-into-4-classes/dataset'
+    root_dir='/kaggle/input/dfu-dataset-annotated-into-4-classes'
 )
 
 # Or if you uploaded your own
