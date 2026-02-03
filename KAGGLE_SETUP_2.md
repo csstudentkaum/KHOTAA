@@ -3,24 +3,11 @@
 
 ---
 
-## ⚠️ IMPORTANT - READ FIRST
+## 📝 BEFORE YOU START
 
-### **YOU MUST REPLACE THE MODEL NAME**
-
-**Before copying any code, replace these placeholders with YOUR model name:**
-
-- `{MODEL_NAME}` → Your exact model name (e.g., `ResNet50`, `EfficientNetV2S`, `MobileNet`)
-- `{model_name}` → Same name but **ALL LOWERCASE** (e.g., `resnet50`, `efficientnetv2s`, `mobilenet`)
-
-**Example:** If training **ResNet50**, replace:
-- `{MODEL_NAME}` with `ResNet50`
-- `{model_name}` with `resnet50`
-
-**These replacements appear in:**
-- ✅ Notebook naming
-- ✅ Checkpoint directories
-- ✅ Results file names
-- ✅ Model experiment names
+**Replace these EVERYWHERE:**
+- `{MODEL_NAME}` → Your model name (e.g., ResNet50)
+- `{model_name}` → Same but lowercase (e.g., resnet50)
 
 ---
 
@@ -40,11 +27,6 @@
 1. Click **Input files**
 2. Search: `dfu-dataset-annotated-into-4-classes`
 3. Click **Add**
-
-**Dataset Link:**
-```
-https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes
-```
 
 ---
 
@@ -237,21 +219,24 @@ checkpoint_manager = CheckpointManager(
 ```python
 model_results_dir = 'results/efficientnetv2s'
 results_file = f'{model_results_dir}/efficientnetv2s_results.json'
+efficientnet_results = { ... }
+json.dump(efficientnet_results, f, indent=4)
 ```
 
 **Change TO:**
 ```python
 model_results_dir = f'{RESULTS_BASE_DIR}/{model_name}'
 results_file = f'{model_results_dir}/{model_name}_results.json'
+model_results = { ... }
+json.dump(model_results, f, indent=4)
 ```
 
-**Replace {model_name} with your model name .**
+**Replace ALL hardcoded paths and variable names with the pattern above.**
 
 ---
 
 ### **CELL 9: Download Results for Kaggle**
 
-reblace efficientnetv2s with your model name 
 ```python
 # Download Results for Kaggle
 import shutil
@@ -263,30 +248,28 @@ print("="*60)
 # Create output directory for Kaggle downloads
 os.makedirs('/kaggle/output', exist_ok=True)
 
-CHECKPOINT_BASE_DIR = '/kaggle/output/checkpoints'
-RESULTS_BASE_DIR = '/kaggle/output/results'
-
-# Archive checkpoints
+# Transfer checkpoints
 if os.path.exists(CHECKPOINT_BASE_DIR):
-    output_file = '/kaggle/output/efficientnetv2s_checkpoints'
-    shutil.make_archive(output_file, 'zip', CHECKPOINT_BASE_DIR)
+    shutil.copytree(CHECKPOINT_BASE_DIR, '/kaggle/output/checkpoints', dirs_exist_ok=True)
+    output_file = f'/kaggle/output/{model_name}_checkpoints'
+    shutil.make_archive(output_file, 'zip', '/kaggle/output/checkpoints')
     size_mb = os.path.getsize(f'{output_file}.zip') / 1e6
     print(f"Checkpoints archived ({size_mb:.1f} MB)")
 else:
     print("Checkpoints directory not found")
 
-# Archive results
+# Transfer results
 if os.path.exists(RESULTS_BASE_DIR):
-    output_file = '/kaggle/output/efficientnetv2s_results'
-    shutil.make_archive(output_file, 'zip', RESULTS_BASE_DIR)
+    shutil.copytree(RESULTS_BASE_DIR, '/kaggle/output/results', dirs_exist_ok=True)
+    output_file = f'/kaggle/output/{model_name}_results'
+    shutil.make_archive(output_file, 'zip', '/kaggle/output/results')
     size_mb = os.path.getsize(f'{output_file}.zip') / 1e6
     print(f"Results archived ({size_mb:.1f} MB)")
 else:
     print("Results directory not found")
 
 print("\n" + "="*60)
-print("Both files available in Kaggle Output section")
-print("Download them directly from Kaggle interface")
+print("DONE! Download from Kaggle Output section")
 print("="*60)
 ```
 
