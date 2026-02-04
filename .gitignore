@@ -47,7 +47,6 @@ logs/
 
 # Outputs & Results
 outputs/
-results/
 *.png
 *.jpg
 *.jpeg
