@@ -52,6 +52,8 @@ outputs/
 *.jpeg
 !README_assets/*.png
 !README_assets/*.jpg
+!models/classification/results/**/*.png
+!models/classification/results/**/*.json
 
 # Test files (removed - we want test scripts in repo)
 # test_*.py
