@@ -47,12 +47,11 @@ logs/
 
 # Outputs & Results
 outputs/
-results/
-*.png
-*.jpg
-*.jpeg
-!README_assets/*.png
-!README_assets/*.jpg
+
+# Allow results folder but block dataset images
+dfu-dataset-annotated-into-4-classes/**/*.png
+dfu-dataset-annotated-into-4-classes/**/*.jpg
+dfu-dataset-annotated-into-4-classes/**/*.jpeg
 
 # Test files (removed - we want test scripts in repo)
 # test_*.py

@@ -229,8 +229,10 @@ class CheckpointManager:
         torch.save(model.state_dict(), path)
         
         # Save score
+        score_value = metrics.get(metric_name, 0)
+        print(f"DEBUG: Saving score - metric_name='{metric_name}', metrics={metrics}, score={score_value}")
         with open(score_path, 'w') as f:
-            json.dump({'score': metrics.get(metric_name, 0)}, f)
+            json.dump({'score': score_value}, f)
         
         print(f"SUCCESS: Best model saved: {path}")
     
