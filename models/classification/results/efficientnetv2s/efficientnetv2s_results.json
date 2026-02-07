@@ -1,0 +1,42 @@
+{
+  "model_name": "EfficientNetV2S",
+  "cv_results": {
+    "val_accuracy": {
+      "mean": 0.978126929796051,
+      "std": 0.0037947105090005446
+    },
+    "avg_epochs": 29.6,
+    "fold_results": [
+      {
+        "fold": 1,
+        "best_val_acc": 0.9808564231738035,
+        "stopped_epoch": 28
+      },
+      {
+        "fold": 2,
+        "best_val_acc": 0.9818548387096774,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 3,
+        "best_val_acc": 0.9808467741935484,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 4,
+        "best_val_acc": 0.9727822580645161,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 5,
+        "best_val_acc": 0.9742943548387096,
+        "stopped_epoch": 30
+      }
+    ]
+  },
+  "best_fold": {
+    "fold_number": 2,
+    "best_val_acc": 0.9818548387096774,
+    "checkpoint_path": "checkpoints/efficientnetv2s_fold2/fold_1/best_accuracy.pt"
+  }
+}
