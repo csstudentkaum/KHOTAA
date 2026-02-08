@@ -1,0 +1,42 @@
+{
+  "model_name": "ResNet101",
+  "cv_results": {
+    "val_accuracy": {
+      "mean": 0.9104923011294386,
+      "std": 0.009802476957462445
+    },
+    "avg_epochs": 29.2,
+    "fold_results": [
+      {
+        "fold": 1,
+        "best_val_acc": 0.9163727959697733,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 2,
+        "best_val_acc": 0.90625,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 3,
+        "best_val_acc": 0.9143145161290323,
+        "stopped_epoch": 30
+      },
+      {
+        "fold": 4,
+        "best_val_acc": 0.921875,
+        "stopped_epoch": 26
+      },
+      {
+        "fold": 5,
+        "best_val_acc": 0.8936491935483871,
+        "stopped_epoch": 30
+      }
+    ]
+  },
+  "best_fold": {
+    "fold_number": 4,
+    "best_val_acc": 0.921875,
+    "checkpoint_path": "checkpoints/resnet101_fold4/fold_1/best_accuracy.pt"
+  }
+}
