@@ -1,0 +1,53 @@
+{
+    "model_name": "GoogLeNet",
+    "cv_results": {
+        "val_accuracy": {
+            "mean": 0.8833776509303648,
+            "std": 0.01074793916468106
+        },
+        "avg_epochs": 29.4,
+        "fold_results": [
+            {
+                "fold": 1,
+                "best_val_acc": 0.8937027707808565,
+                "stopped_epoch": 30
+            },
+            {
+                "fold": 2,
+                "best_val_acc": 0.8961693548387096,
+                "stopped_epoch": 30
+            },
+            {
+                "fold": 3,
+                "best_val_acc": 0.8810483870967742,
+                "stopped_epoch": 28
+            },
+            {
+                "fold": 4,
+                "best_val_acc": 0.8664314516129032,
+                "stopped_epoch": 29
+            },
+            {
+                "fold": 5,
+                "best_val_acc": 0.8795362903225806,
+                "stopped_epoch": 30
+            }
+        ]
+    },
+    "test_results": {
+        "test_accuracy": 0.524822695035461,
+        "test_loss": 1.3237285123649218,
+        "precision": 0.5375306372549019,
+        "recall": 0.5263396513396514,
+        "f1_score": 0.5098809009123839,
+        "specificity": 0.8455715351616785,
+        "sensitivity": 0.5263396513396514,
+        "mcc": 0.3782483937724188,
+        "auc": 0.7781931173778043
+    },
+    "inference_time": {
+        "total_time": 5.618505001068115,
+        "avg_time_per_image_ms": 35.11565625667572,
+        "throughput_fps": 25.095643765235586
+    }
+}
