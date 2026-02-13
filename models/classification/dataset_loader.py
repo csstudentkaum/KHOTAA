@@ -39,7 +39,37 @@ class SplitFolderDatasetLoader:
         print(f"[DatasetLoader] Splits: {self.splits}")
         print(f"[DatasetLoader] Classes ({len(self.class_names)}): {self.class_names}")
 
-    def _scan_split(self, split):
+    def _get_original_key(self, filepath):
+        """Extract the original image key from a Roboflow-augmented filename.
+
+        Roboflow filenames follow the pattern: <original>_jpg.rf.<hash>.jpg
+        This extracts <original> so we can group duplicates.
+        Returns None if the file is not a Roboflow augmented file.
+        """
+        basename = os.path.basename(filepath)
+        if '.rf.' in basename:
+            return basename.split('.rf.')[0]
+        return None
+
+    def _deduplicate(self, X_paths, y_labels):
+        """Keep only one file per unique original image (removes Roboflow duplicates)."""
+        seen = {}
+        dedup_paths = []
+        dedup_labels = []
+
+        for path, label in zip(X_paths, y_labels):
+            key = self._get_original_key(path)
+            if key is None:
+                dedup_paths.append(path)
+                dedup_labels.append(label)
+            elif key not in seen:
+                seen[key] = True
+                dedup_paths.append(path)
+                dedup_labels.append(label)
+
+        return np.array(dedup_paths), np.array(dedup_labels, dtype=np.int64)
+
+    def _scan_split(self, split, deduplicate=True):
         if split not in self.splits:
             raise ValueError(f"Unknown split '{split}'. Available: {self.splits}")
 
@@ -64,13 +94,23 @@ class SplitFolderDatasetLoader:
 
         X_paths = np.array(X_paths)
         y_labels = np.array(y_labels, dtype=np.int64)
+        total_files = len(X_paths)
 
-        print(f"[DatasetLoader] Split '{split}': {len(X_paths)} images")
+        if deduplicate:
+            X_paths, y_labels = self._deduplicate(X_paths, y_labels)
+            removed = total_files - len(X_paths)
+            if removed > 0:
+                print(f"[DatasetLoader] Split '{split}': {len(X_paths)} images (de-duplicated from {total_files}, removed {removed} Roboflow copies)")
+            else:
+                print(f"[DatasetLoader] Split '{split}': {len(X_paths)} images")
+        else:
+            print(f"[DatasetLoader] Split '{split}': {len(X_paths)} images")
+
         return X_paths, y_labels
 
-    def load_split_paths(self, split, shuffle=False):
+    def load_split_paths(self, split, shuffle=False, deduplicate=True):
         """Load image paths and integer labels."""
-        X_paths, y_labels = self._scan_split(split)
+        X_paths, y_labels = self._scan_split(split, deduplicate=deduplicate)
 
         if shuffle:
             idx = np.random.permutation(len(X_paths))
@@ -79,9 +119,9 @@ class SplitFolderDatasetLoader:
 
         return X_paths, y_labels
 
-    def load_split_images(self, split, to_rgb=True, shuffle=False):
+    def load_split_images(self, split, to_rgb=True, shuffle=False, deduplicate=True):
         """Load actual images and labels."""
-        X_paths, y_labels = self.load_split_paths(split, shuffle=shuffle)
+        X_paths, y_labels = self.load_split_paths(split, shuffle=shuffle, deduplicate=deduplicate)
 
         images = []
         for path in X_paths:
@@ -101,7 +141,7 @@ class SplitFolderDatasetLoader:
     def get_num_classes(self):
         return len(self.class_names)
 
-    def get_class_counts(self, split):
-        _, y = self._scan_split(split)
+    def get_class_counts(self, split, deduplicate=True):
+        _, y = self._scan_split(split, deduplicate=deduplicate)
         counter = Counter(y)
         return {self.class_names[k]: v for k, v in sorted(counter.items())}
