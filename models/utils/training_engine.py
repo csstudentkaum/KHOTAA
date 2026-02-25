@@ -1,6 +1,13 @@
 """
 Training Engine - PyTorch Training & Evaluation Runner
-Handles the complete training loop, evaluation, and cross-validation
+Handles the complete training loop, evaluation, and cross-validation.
+
+Default configuration aligned with the DenseNet121 DFU notebook:
+  - Optimizer : Adam  (lr = 1e-3)
+  - Scheduler : ReduceLROnPlateau (factor=0.3, patience=3, min_lr=1e-7)
+  - EarlyStopping : patience = 7
+  - Class weights : balanced (sklearn)
+  - Two-phase training : frozen base → fine-tune last N layers
 """
 
 import torch
@@ -10,26 +17,24 @@ from tqdm import tqdm
 import numpy as np
 import time
 from sklearn.model_selection import StratifiedKFold
+from sklearn.utils.class_weight import compute_class_weight
 
 
-def create_optimizer(model, optimizer_type='sgd', lr=0.001, momentum=0.8, weight_decay=1e-4):
+def create_optimizer(model, optimizer_type='adam', lr=0.001, momentum=0.8, weight_decay=1e-4):
     """
-    Create optimizer with recommended defaults for DFU classification
+    Create optimizer with recommended defaults for DFU classification.
+
+    Default: Adam with lr=1e-3 (as per DenseNet121 DFU notebook).
     
     Args:
         model: PyTorch model
         optimizer_type (str): Type of optimizer ('sgd', 'adam', 'adamw')
         lr (float): Learning rate (default: 0.001)
-        momentum (float): Momentum for SGD (default: 0.8 as per paper)
+        momentum (float): Momentum for SGD (default: 0.8)
         weight_decay (float): L2 regularization (default: 1e-4)
     
     Returns:
         torch.optim.Optimizer: Configured optimizer
-    
-    Recommended configurations:
-        - SGD: Best for ResNet, DenseNet (as per research papers)
-        - Adam: Good general choice, easier to tune
-        - AdamW: Best for EfficientNet, modern architectures
     """
     optimizer_type = optimizer_type.lower()
     
@@ -70,25 +75,22 @@ def create_optimizer(model, optimizer_type='sgd', lr=0.001, momentum=0.8, weight
     return optimizer
 
 
-def create_scheduler(optimizer, scheduler_type='step', step_size=10, gamma=0.1, **kwargs):
+def create_scheduler(optimizer, scheduler_type='plateau', step_size=10, gamma=0.3, **kwargs):
     """
-    Create learning rate scheduler with recommended defaults
+    Create learning rate scheduler with recommended defaults.
+
+    Default: ReduceLROnPlateau (factor=0.3, patience=3, min_lr=1e-7)
+    aligned with the DenseNet121 DFU notebook.
     
     Args:
         optimizer: PyTorch optimizer
         scheduler_type (str): Type of scheduler ('step', 'cosine', 'plateau', 'exponential')
         step_size (int): For StepLR, epochs before reducing lr (default: 10)
-        gamma (float): Learning rate decay factor (default: 0.1)
+        gamma (float): Learning rate decay factor (default: 0.3)
         **kwargs: Additional scheduler-specific arguments
     
     Returns:
         torch.optim.lr_scheduler: Configured scheduler
-    
-    Scheduler types:
-        - step: Reduces lr every step_size epochs (simple, reliable)
-        - cosine: Cosine annealing (smooth decay, good for long training)
-        - plateau: Reduces when metric plateaus (adaptive)
-        - exponential: Exponential decay (gradual reduction)
     """
     scheduler_type = scheduler_type.lower()
     
@@ -114,17 +116,20 @@ def create_scheduler(optimizer, scheduler_type='step', step_size=10, gamma=0.1, 
     
     elif scheduler_type == 'plateau':
         # ReduceLROnPlateau: Reduce when validation metric plateaus
+        # Defaults aligned with DenseNet121 DFU notebook
         mode = kwargs.get('mode', 'min')  # 'min' for loss, 'max' for accuracy
-        patience = kwargs.get('patience', 5)
+        patience = kwargs.get('patience', 3)
         factor = kwargs.get('factor', gamma)
+        min_lr = kwargs.get('min_lr', 1e-7)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode=mode,
             factor=factor,
             patience=patience,
+            min_lr=min_lr,
             verbose=True
         )
-        print(f"Created ReduceLROnPlateau scheduler: mode={mode}, patience={patience}, factor={factor}")
+        print(f"Created ReduceLROnPlateau scheduler: mode={mode}, patience={patience}, factor={factor}, min_lr={min_lr}")
     
     elif scheduler_type == 'exponential':
         # ExponentialLR: Exponential decay
@@ -385,7 +390,11 @@ class TrainingEngine:
             
             # Update learning rate
             if scheduler is not None:
-                scheduler.step()
+                # ReduceLROnPlateau needs the monitored metric as argument
+                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    scheduler.step(val_loss)
+                else:
+                    scheduler.step()
                 current_lr = optimizer.param_groups[0]['lr']
                 print(f"Learning Rate: {current_lr:.6f}")
             
@@ -627,3 +636,65 @@ fold_metrics, summary = cv_helper.run(
 
 print(f"Mean Val Accuracy: {summary['val_accuracy']['mean']:.4f}")
 """
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CLASS WEIGHT UTILITIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def compute_balanced_class_weights(labels, device='cpu'):
+    """
+    Compute balanced class weights using sklearn (same approach as the
+    DenseNet121 DFU notebook) and return a PyTorch tensor suitable for
+    ``nn.CrossEntropyLoss(weight=...)``.
+
+    Args:
+        labels (array-like): 1-D integer class labels.
+        device (str): Target device for the weight tensor.
+
+    Returns:
+        torch.FloatTensor: Weight tensor of shape ``(num_classes,)``.
+    """
+    labels = np.asarray(labels)
+    classes = np.unique(labels)
+    weights = compute_class_weight(
+        class_weight='balanced',
+        classes=classes,
+        y=labels,
+    )
+    weight_dict = dict(zip(classes.tolist(), weights.tolist()))
+    print(f"[ClassWeights] Balanced class weights: {weight_dict}")
+    return torch.FloatTensor(weights).to(device)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FINE-TUNING HELPER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def freeze_base(model, unfreeze_last_n=0):
+    """
+    Freeze all parameters in a model, then optionally unfreeze the last
+    *n* parameters (mimics the notebook's two-phase fine-tuning).
+
+    Args:
+        model: PyTorch model.
+        unfreeze_last_n (int): Number of parameter groups (layers) to
+            unfreeze from the end of the model.  ``0`` means freeze
+            everything (Phase 1).
+
+    Returns:
+        int: Number of trainable parameters after freezing / unfreezing.
+    """
+    # Freeze all parameters
+    for param in model.parameters():
+        param.requires_grad = False
+
+    if unfreeze_last_n > 0:
+        params = list(model.parameters())
+        for p in params[-unfreeze_last_n:]:
+            p.requires_grad = True
+
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total     = sum(p.numel() for p in model.parameters())
+    print(f"[freeze_base] Trainable params: {trainable:,} / {total:,}")
+    return trainable
