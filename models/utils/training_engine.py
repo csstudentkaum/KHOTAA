@@ -408,20 +408,8 @@ class TrainingEngine:
             print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}%")
             print(f"   Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc*100:.2f}%")
             
-            # Save checkpoint
-            if checkpoint_manager is not None:
-                checkpoint_manager.save_checkpoint(
-                    fold_index=0,  # Using 0 since we create separate managers per fold
-                    model=self.model,
-                    optimizer=optimizer,
-                    epoch=epoch+1,
-                    metrics={
-                        'train_loss': train_loss,
-                        'train_acc': train_acc,
-                        'val_loss': val_loss,
-                        'val_acc': val_acc
-                    }
-                )
+                # Save checkpoint (DISABLED: only save best model to avoid disk errors)
+                # Per-epoch checkpoint saving is now disabled.
             
             # Save best model
             if val_acc > best_val_acc:
