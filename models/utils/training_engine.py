@@ -126,8 +126,7 @@ def create_scheduler(optimizer, scheduler_type='plateau', step_size=10, gamma=0.
             mode=mode,
             factor=factor,
             patience=patience,
-            min_lr=min_lr,
-            verbose=True
+            min_lr=min_lr
         )
         print(f"Created ReduceLROnPlateau scheduler: mode={mode}, patience={patience}, factor={factor}, min_lr={min_lr}")
     
