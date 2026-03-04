@@ -1,0 +1,57 @@
+{
+  "best_model": "EfficientNetV2S",
+  "primary_metric": "Macro_F1",
+  "best_macro_f1": 0.91,
+  "best_mcc": 0.8424,
+  "best_cv_acc": "80.81 +/- 1.72",
+  "ranking": [
+    {
+      "Rank": 1,
+      "Model": "EfficientNetV2S",
+      "Macro_F1": 0.91,
+      "MCC": 0.8424,
+      "Val_Accuracy": 0.9012,
+      "Macro_AUC": 0.9848
+    },
+    {
+      "Rank": 2,
+      "Model": "MobileNetV2",
+      "Macro_F1": 0.8687,
+      "MCC": 0.7653,
+      "Val_Accuracy": 0.8527,
+      "Macro_AUC": 0.9669
+    },
+    {
+      "Rank": 3,
+      "Model": "DenseNet121",
+      "Macro_F1": 0.8478,
+      "MCC": 0.6983,
+      "Val_Accuracy": 0.8102,
+      "Macro_AUC": 0.9532
+    },
+    {
+      "Rank": 4,
+      "Model": "ResNet50",
+      "Macro_F1": 0.7842,
+      "MCC": 0.6394,
+      "Val_Accuracy": 0.7725,
+      "Macro_AUC": 0.9309
+    },
+    {
+      "Rank": 5,
+      "Model": "ResNet101",
+      "Macro_F1": 0.7834,
+      "MCC": 0.627,
+      "Val_Accuracy": 0.7603,
+      "Macro_AUC": 0.9375
+    },
+    {
+      "Rank": 6,
+      "Model": "GoogLeNet",
+      "Macro_F1": 0.4085,
+      "MCC": 0.2726,
+      "Val_Accuracy": 0.5413,
+      "Macro_AUC": 0.7613
+    }
+  ]
+}
