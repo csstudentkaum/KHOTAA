@@ -116,7 +116,6 @@ KHOTAA/
 │       ├── checkpoint_manager.py           # Checkpoint save/load
 │       └── model_comparison.py             # Comparison utilities
 ├── DFU_dataset/                            # DFU dataset (Roboflow, not in repo)
-├── preprocessing_visualization.ipynb       # Data exploration notebook
 ├── requirements.txt                        # Python dependencies
 └── README.md
 ```
