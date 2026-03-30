@@ -28,6 +28,7 @@ checkpoints/
 dataset/
 data/
 dfu-dataset-annotated-into-4-classes/
+DFU_dataset/
 
 # IDE
 .vscode/

@@ -1,162 +1,164 @@
-# KHOTAA: Smart Diabetic Foot Shield 
+# KHOTAA — Smart Diabetic Foot Shield
 
-Deep Learning-based image classification system for Diabetic Foot Ulcer (DFU) severity grading.
+Deep learning classification system for **Diabetic Foot Ulcer (DFU)** images, classifying wound pathology into 4 classes: **Both**, **Infection**, **Ischaemia**, and **None**.
 
-### Dataset
-- **Source:** [Kaggle DFU Dataset](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
-- **Total Images:** 10,062
-- **Classes:** 4 (Grade 1, Grade 2, Grade 3, Grade 4)
-- **Splits:** Train (9,639), Valid (282), Test (141)
+---
 
-## 🏗️ Project Structure
+## Dataset
+
+- **Source:** [Roboflow — DFU Dataset](https://universe.roboflow.com/diabetic-c6n36/dfu-kew1f) (CC BY 4.0)
+- **Total Images:** 4,446
+- **Classes:** 4 — Both, Infection, Ischaemia, None
+- **Splits:** Train (3,556) / Valid (445) / Test (445)
+- **Imbalance Ratio:** 11.3× (Ischaemia: 152 vs None: 1,725)
+
+| Class | Train | Valid | Test |
+|-------|:-----:|:-----:|:----:|
+| Both | 416 | — | — |
+| Infection | 1,708 | — | — |
+| Ischaemia | 152 | — | — |
+| None | 1,725 | — | — |
+
+> **Note:** Because of the heavy class imbalance, **Macro F1** is used as the primary evaluation metric (not accuracy).
+
+---
+
+## Pipeline Overview
+
+```
+1. Data Preprocessing & Augmentation
+2. 5-Fold Stratified Cross-Validation (6 models)
+3. Model Comparison → Select best model (EfficientNetV2-S)
+4. Head Architecture Search (21 configs)
+5. Final Training (train+valid combined, 30 epochs)
+6. Test Evaluation (reserved test set)
+```
+
+---
+
+## Model Comparison Results
+
+6 architectures evaluated via **5-fold stratified CV**, ranked by **Macro F1** (primary metric for imbalanced data):
+
+| Rank | Model | CV Mean Acc | Macro F1 | MCC | Macro AUC |
+|:----:|-------|:-----------:|:--------:|:---:|:---------:|
+| **1** | **EfficientNetV2-S** | **80.81%** | **91.00%** | **0.8424** | **0.9848** |
+| 2 | MobileNetV2 | 75.38% | 86.87% | 0.7653 | 0.9669 |
+| 3 | DenseNet121 | 74.16% | 84.78% | 0.6983 | 0.9532 |
+| 4 | ResNet50 | 70.71% | 78.42% | 0.6394 | 0.9309 |
+| 5 | ResNet101 | 75.63% | 78.34% | 0.6270 | 0.9375 |
+| 6 | GoogLeNet | 78.96% | 40.85% | 0.2726 | 0.7613 |
+
+---
+
+## Head Architecture Search
+
+After selecting EfficientNetV2-S, a **head architecture search** was conducted — 21 random configurations screened on fold 1, top 3 validated across all 5 folds.
+
+**Winner — Trial 4:**
+
+| Parameter | Value |
+|-----------|-------|
+| Hidden Layers | 1 |
+| Hidden Sizes | [128] |
+| Dropout | 0.5 |
+| Activation | GELU |
+| BatchNorm | No |
+| **5-Fold Mean Acc** | **83.43% ± 2.90%** |
+| **5-Fold Mean F1** | **84.31% ± 1.82%** |
+
+Architecture: `1280 → Linear(128) → GELU → Dropout(0.5) → Linear(4)`
+
+---
+
+## Final Model — Test Set Performance
+
+EfficientNetV2-S + winning head, trained on **all non-test data** (train + valid combined) for **30 fixed epochs**:
+
+| Metric | Score |
+|--------|:-----:|
+| **Accuracy** | **84.04%** |
+| **Macro F1** | **82.93%** |
+| **Macro Precision** | **81.64%** |
+| **Macro Recall** | **86.53%** |
+| **Macro Specificity** | **93.41%** |
+| **MCC** | **0.7434** |
+| **AUC-ROC** | **0.9591** |
+
+---
+
+## Project Structure
 
 ```
 KHOTAA/
 ├── models/
-│   ├── classification/          # Classification model notebooks
-│   │   ├── dataset_loader.py    # ✅ Dataset loader (complete)
-│   │   ├── resnet50.ipynb       # ResNet50 model
-│   │   ├── densenet.ipynb       # DenseNet model
-│   │   ├── googlenet.ipynb      # GoogLeNet model
-│   │   ├── mobilenet.ipynb      # MobileNet model
-│   │   ├── resnet101.ipynb      # ResNet101 model
-│   │   ├── efficientnetv2s.ipynb # EfficientNetV2S model
-│   │   └── pfcnn_drnn.ipynb     # Custom PFCNN+DRNN model
-│   └── utils/                   # Utility notebooks
-│       ├── model_manager.ipynb
-│       ├── model_runner.ipynb
-│       └── training_utils.ipynb
-├── dataset/                     # Dataset folder (not in repo)
-├── test_dataset_loader.py       # Dataset verification script
-├── requirements.txt             # Python dependencies
-├── DATASET_SETUP.md            # Dataset information
-└── README.md                   # This file
+│   ├── classification/
+│   │   ├── dataset_loader.py               # Dataset loader utility
+│   │   ├── dataset_preprocessing.py        # Augmentation & transforms
+│   │   ├── resnet50.ipynb                  # ResNet50 — 5-fold CV
+│   │   ├── resnet101.ipynb                 # ResNet101 — 5-fold CV
+│   │   ├── densenet121.ipynb               # DenseNet121 — 5-fold CV
+│   │   ├── googlenet.ipynb                 # GoogLeNet — 5-fold CV
+│   │   ├── mobilenetv2.ipynb               # MobileNetV2 — 5-fold CV
+│   │   ├── efficientnetv2s.ipynb           # EfficientNetV2-S — 5-fold CV
+│   │   ├── efficientnetv2s_head_search.ipynb   # Head architecture search
+│   │   ├── efficientnetv2s-final-training.ipynb # Final training & test eval
+│   │   ├── model_comparison.ipynb          # 6-model comparison notebook
+│   │   ├── results/                        # All metrics JSONs & figures
+│   │   │   ├── *_comprehensive_metrics.json    # Per-model CV + val metrics
+│   │   │   ├── head_search_results.json        # Head search results
+│   │   │   ├── efficientnetv2s_final_results/  # Final model + test results
+│   │   │   └── comparison/                     # Comparison figures & tables
+│   │   └── checkpoints/                    # Model checkpoints (per fold)
+│   └── utils/
+│       ├── training_engine.py              # TrainingEngine, optimizers, schedulers
+│       ├── metrics_evaluator.py            # Metrics, plots, confusion matrix, ROC
+│       ├── checkpoint_manager.py           # Checkpoint save/load
+│       └── model_comparison.py             # Comparison utilities
+├── DFU_dataset/                            # DFU dataset (Roboflow, not in repo)
+├── requirements.txt                        # Python dependencies
+└── README.md
 ```
 
-## 🚀 Getting Started
+---
 
-### 1. Clone the Repository
+## Getting Started
+
+### 1. Clone & Setup
 
 ```bash
 git clone https://github.com/csstudentkaum/KHOTAA.git
 cd KHOTAA
-```
-
-### 2. Set Up Environment
-
-**Option A: Using pip**
-```bash
+python -m venv .venv
+.venv\Scripts\activate         # Windows
+# source .venv/bin/activate    # Linux/Mac
 pip install -r requirements.txt
 ```
 
-**Option B: Using virtual environment (Recommended)**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
+### 2. Download Dataset
 
-### 3. Download the Dataset
+The dataset is downloaded automatically via Roboflow API in each notebook. Alternatively, download manually from [Roboflow](https://universe.roboflow.com/diabetic-c6n36/dfu-kew1f) and place it in `DFU_dataset/`.
 
-1. Download from [Kaggle](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
-2. Extract to `KHOTAA/dataset/` folder
-3. Verify structure:
-   ```
-   dataset/
-   ├── train/
-   │   ├── Grade 1/
-   │   ├── Grade 2/
-   │   ├── Grade 3/
-   │   └── Grade 4/
-   ├── valid/
-   └── test/
-   ```
+### 3. Run on Kaggle
 
-### 4. Test the Dataset Loader
+All training notebooks are designed to run on **Kaggle GPU**. Each notebook includes a setup cell that clones the repo and installs dependencies automatically.
 
-```bash
-python3 test_dataset_loader.py
-```
+---
 
-Expected output:
-- ✅ Dataset found
-- ✅ 10,062 images loaded
-- ✅ 4 classes identified
-- ✅ All splits working
+## Training Configuration
 
-### 5. Start Training
+Validated via cross-validation and used consistently across all experiments:
 
-Open any model notebook and start experimenting:
-```bash
-jupyter notebook models/classification/resnet50.ipynb
-```
+| Component | Setting |
+|-----------|---------|
+| Optimizer | Adam (lr=1e-3, weight_decay=1e-4) |
+| Scheduler | ReduceLROnPlateau (factor=0.3, patience=3, min_lr=1e-7) |
+| Loss | CrossEntropyLoss (balanced class weights) |
+| Batch Size | 32 |
+| Input Size | 224 × 224 |
+| Augmentation | H-flip, V-flip, rotation (±20°), zoom, brightness, contrast |
 
-##  Models
-
-We're implementing 7 deep learning models for comparison:
-
-| Model | Type | Status | Notebook |
-|-------|------|--------|----------|
-| ResNet50 | CNN | In Progress | `resnet50.ipynb` |
-| DenseNet | CNN | In Progress | `densenet.ipynb` |
-| GoogLeNet | Inception | In Progress | `googlenet.ipynb` |
-| MobileNet | Mobile | In Progress| `mobilenet.ipynb` |
-| ResNet101 | Deep CNN |In Progress| `resnet101.ipynb` |
-| EfficientNetV2S | Efficient | In Progress| `efficientnetv2s.ipynb` |
-| PFCNN + DRNN | Custom | In Progress | `pfcnn_drnn.ipynb` |
-
-## 👥 Team Collaboration
-
-### For Team Members
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/csstudentkaum/KHOTAA.git
-   cd KHOTAA
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Download dataset** (see section 3 above)
-
-4. **Create a branch for your model:**
-   ```bash
-   git checkout -b feature/model-name
-   # Example: git checkout -b feature/resnet50
-   ```
-
-5. **Work on your assigned model**
-
-6. **Push your changes:**
-   ```bash
-   git add .
-   git commit -m "Implemented ResNet50 model"
-   git push origin feature/model-name
-   ```
-
-7. **Create a Pull Request** on GitHub
-
-### Workflow
-
-- Each team member works on **one model**
-- Use **separate branches** for each model
-- **Commit frequently** with clear messages
-- Create **Pull Requests** for review before merging
-- Use **Issues** for bug tracking and discussions
-
-##  Dataset Information
-
-See [DATASET_SETUP.md](DATASET_SETUP.md) for detailed dataset information.
-
-**Quick Stats:**
-- Total: 10,062 images
-- Grade 1: 2,370 images (23.6%)
-- Grade 2: 2,460 images (24.5%)
-- Grade 3: 2,802 images (27.8%)
-- Grade 4: 2,430 images (24.1%)
+---
 
 ## Tech Stack
 
@@ -164,24 +166,30 @@ See [DATASET_SETUP.md](DATASET_SETUP.md) for detailed dataset information.
 - **Data Processing:** NumPy, OpenCV, Pillow
 - **Visualization:** Matplotlib, Seaborn
 - **Metrics:** scikit-learn
-- **Environment:** Jupyter Notebooks
+- **Dataset:** Roboflow
+- **Environment:** Jupyter Notebooks, Kaggle GPU
 
-##  Requirements
+---
+
+## Requirements
 
 See [requirements.txt](requirements.txt) for full dependencies.
 
 Key packages:
 - `torch >= 2.0.0`
 - `torchvision >= 0.15.0`
-- `opencv-python >= 4.8.0`
 - `numpy >= 1.24.0`
 - `scikit-learn >= 1.3.0`
-
-##  Acknowledgments
-
-- Dataset: [Khalid Siddiqui - Kaggle](https://www.kaggle.com/datasets/khalidsiddiqui2003/dfu-dataset-annotated-into-4-classes)
-- Inspiration: Medical AI research for diabetic foot ulcer classification
+- `matplotlib >= 3.7.0`
+- `roboflow`
 
 ---
 
-**Note:** The `dataset/` folder is not included in the repository. Each team member must download it separately from Kaggle.
+## Acknowledgments
+
+- **Dataset:** [Roboflow — DFU Dataset](https://universe.roboflow.com/diabetic-c6n36/dfu-kew1f) (CC BY 4.0)
+- Medical AI research for diabetic foot ulcer classification
+
+---
+
+**Note:** The `DFU_dataset/` folder is not included in the repository. It is downloaded automatically via Roboflow API in each notebook.
