@@ -9,15 +9,9 @@ Deep learning classification system for **Diabetic Foot Ulcer (DFU)** images, cl
 - **Source:** [Roboflow — DFU Dataset](https://universe.roboflow.com/diabetic-c6n36/dfu-kew1f) (CC BY 4.0)
 - **Total Images:** 4,446
 - **Classes:** 4 — Both, Infection, Ischaemia, None
-- **Splits:** Train (3,556) / Valid (445) / Test (445)
+- **Splits:** Train (3,112) / Valid (889) / Test (445)
 - **Imbalance Ratio:** 11.3× (Ischaemia: 152 vs None: 1,725)
-
-| Class | Train | Valid | Test |
-|-------|:-----:|:-----:|:----:|
-| Both | 416 | — | — |
-| Infection | 1,708 | — | — |
-| Ischaemia | 152 | — | — |
-| None | 1,725 | — | — |
+- **CV Setup:** Train + Valid combined (4,001 images) for 5-fold stratified cross-validation. Test set (445 images) held out entirely.
 
 > **Note:** Because of the heavy class imbalance, **Macro F1** is used as the primary evaluation metric (not accuracy).
 
@@ -33,6 +27,34 @@ Deep learning classification system for **Diabetic Foot Ulcer (DFU)** images, cl
 5. Final Training (train+valid combined, 30 epochs)
 6. Test Evaluation (reserved test set)
 ```
+
+---
+
+## Preprocessing & Augmentation
+
+All models use the same preprocessing pipeline defined in `dataset_preprocessing.py`, ensuring fair comparison.
+
+**Training transforms (with augmentation):**
+
+| Transform | Value |
+|-----------|-------|
+| Resize | 224 × 224 |
+| Random Horizontal Flip | p = 0.5 |
+| Random Vertical Flip | p = 0.5 |
+| Random Rotation | ± 20° |
+| Random Affine (zoom) | scale ± 20% |
+| Color Jitter — Brightness | ± 10% |
+| Color Jitter — Contrast | ± 10% |
+| Normalize (ImageNet) | mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225) |
+
+**Validation / Test transforms (no augmentation):**
+
+| Transform | Value |
+|-----------|-------|
+| Resize | 224 × 224 |
+| Normalize (ImageNet) | mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225) |
+
+> Augmentation is applied on-the-fly during training only. Validation and test images are only resized and normalized.
 
 ---
 
